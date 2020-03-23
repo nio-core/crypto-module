@@ -1,3 +1,5 @@
+package client;
+
 import sawtooth.sdk.signing.Context;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.PublicKey;
@@ -5,21 +7,21 @@ import sawtooth.sdk.signing.Secp256k1Context;
 
 public class HyperZMQStub {
 
-    PrivateKey _privateKey;
-    PublicKey _publicKey;
+    PrivateKey privateKey;
+    PublicKey publicKey;
 
     public HyperZMQStub() {
         Context context = new Secp256k1Context();
-        _privateKey = context.newRandomPrivateKey();
-        _publicKey = context.getPublicKey(_privateKey);
+        privateKey = context.newRandomPrivateKey();
+        publicKey = context.getPublicKey(privateKey);
     }
 
     PrivateKey getPrivateKey() {
-        return _privateKey;
+        return privateKey;
     }
 
     PublicKey getPublicKey() {
-        return _publicKey;
+        return publicKey;
     }
 
     void send() {

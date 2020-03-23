@@ -1,12 +1,10 @@
+import client.HyperZMQStub;
+import client.KEManager;
 import org.junit.Test;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.signing.Context;
-import sawtooth.sdk.signing.PrivateKey;
-import sawtooth.sdk.signing.PublicKey;
-import sawtooth.sdk.signing.Secp256k1Context;
 
-public class TestJoining {
+public class JoinNetworkTest {
 
     boolean run = true;
 
@@ -16,10 +14,7 @@ public class TestJoining {
         KEManager memberClient = new KEManager("memberClient", new HyperZMQStub());
         String addr = "tcp://127.0.0.1:5555";
 
-        memberClient.listenForRequests(addr, ((applicantID, applicantPublicKey) -> {
-            System.out.println("appl id: " + applicantID);
-            System.out.println("appl pub key: " + applicantPublicKey);
-        }));
+        memberClient.listenForRequests(addr);
 
         Thread.sleep(2000);
 
@@ -50,16 +45,15 @@ public class TestJoining {
 
     @Test
     public void testSendReceive() throws InterruptedException {
-        /*
         ZContext ctx1 = new ZContext();
         ZContext ctx2 = new ZContext();
 
         String addr = "tcp://127.0.0.1:5555";
 
-        ZMQ.Socket subSocket = ctx1.createSocket(ZMQ.PAIR);
+        ZMQ.Socket subSocket = ctx1.createSocket(ZMQ.SUB);
         subSocket.connect(addr);
-        //subSocket.subscribe("A".getBytes());
-        ZMQ.Socket pubSocket = ctx2.createSocket(ZMQ.PAIR);
+        subSocket.subscribe("A".getBytes());
+        ZMQ.Socket pubSocket = ctx2.createSocket(ZMQ.PUB);
         pubSocket.bind("tcp://*:5555");
         Thread t = new Thread(() -> {
             while (run) {
@@ -72,14 +66,13 @@ public class TestJoining {
         for (int i = 0; i < 5; i++) {
             Thread.sleep(1000);
             //pubSocket.sendMore("A".getBytes());
-            pubSocket.send("HALLO");
-            System.out.println("Message sent");
+            pubSocket.send("AHALLO");
+            System.out.println("message.Message sent");
 
         }
         Thread.sleep(2000);
         run = false;
         ctx1.close();
         ctx2.close();
-        */
     }
 }
