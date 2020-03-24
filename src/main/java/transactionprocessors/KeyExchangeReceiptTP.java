@@ -13,13 +13,13 @@ import java.util.Collections;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class KeyExchangeProcessor implements TransactionHandler {
+public class KeyExchangeReceiptTP implements TransactionHandler {
 
     private static final String TRANSACTION_FAMILY_NAME = "KeyExchangeReceipt";
     private static final String TRANSACTION_FAMILY_VERSION = "0.1";
     private String _namespace;
 
-    public KeyExchangeProcessor() {
+    public KeyExchangeReceiptTP() {
         // Convention
         _namespace = Utils.hash512(transactionFamilyName().getBytes(UTF_8)).substring(0, 6);
         print("Starting KeyExchangeReceiptTP with namespace '" + _namespace + "'");
@@ -53,7 +53,7 @@ public class KeyExchangeProcessor implements TransactionHandler {
         // Connect the transaction processor to the validator
         TransactionProcessor tp = new TransactionProcessor(url);
         // The handler implements the actual chaincode
-        tp.addHandler(new KeyExchangeProcessor());
+        tp.addHandler(new KeyExchangeReceiptTP());
         Thread t = new Thread(tp);
         t.start();
     }

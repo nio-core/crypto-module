@@ -20,7 +20,7 @@ public class JoinNetworkThread implements Runnable {
     private String myID;
     private String applID;
     private String applPublicKey;
-    private JoinNetworkCallback joinNetworkCallback;
+    private IJoinNetworkCallback joinNetworkCallback;
     private String address;
     private PrivateKey myPrivateKey;
     private String myPublicKeyHex;
@@ -30,7 +30,7 @@ public class JoinNetworkThread implements Runnable {
     private String topic_prefix;
 
     public JoinNetworkThread(String myID, String address, String applID, String applPublicKey, PrivateKey myPrivateKey,
-                             String myPublicKeyHex, JoinNetworkCallback joinNetworkCallback) {
+                             String myPublicKeyHex, IJoinNetworkCallback joinNetworkCallback) {
         this.myID = myID;
         this.address = address;
         this.applID = applID;
