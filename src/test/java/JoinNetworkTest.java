@@ -10,17 +10,17 @@ public class JoinNetworkTest {
 
     @Test
     public void testJoining() throws InterruptedException {
-        KEManager joinClient = new KEManager("joinClient", new HyperZMQStub());
-        KEManager memberClient = new KEManager("memberClient", new HyperZMQStub());
-        String addr = "tcp://127.0.0.1:5555";
+        String address = "tcp://127.0.0.1:5555";
+        KEManager joinClient = new KEManager("joinClient", new HyperZMQStub(), address);
+        KEManager memberClient = new KEManager("memberClient", new HyperZMQStub(), address);
 
-        memberClient.listenForRequests(addr);
+        Thread.sleep(1000);
 
-        Thread.sleep(2000);
+        memberClient.handleJoinNetwork(joinClient.getRequest());
+        Thread.sleep(300);
+        joinClient.sendJoinRequest(address);
 
-        joinClient.sendJoinRequest(addr);
-
-        Thread.sleep(4000);
+        while(true) {}
 
     }
 
@@ -43,36 +43,5 @@ public class JoinNetworkTest {
         */
     }
 
-    @Test
-    public void testSendReceive() throws InterruptedException {
-        ZContext ctx1 = new ZContext();
-        ZContext ctx2 = new ZContext();
 
-        String addr = "tcp://127.0.0.1:5555";
-
-        ZMQ.Socket subSocket = ctx1.createSocket(ZMQ.SUB);
-        subSocket.connect(addr);
-        subSocket.subscribe("A".getBytes());
-        ZMQ.Socket pubSocket = ctx2.createSocket(ZMQ.PUB);
-        pubSocket.bind("tcp://*:5555");
-        Thread t = new Thread(() -> {
-            while (run) {
-                System.out.println("Receiving in thread: " + Thread.currentThread().getId());
-                String s = subSocket.recvStr();
-                System.out.println("received:" + s);
-            }
-        });
-        t.start();
-        for (int i = 0; i < 5; i++) {
-            Thread.sleep(1000);
-            //pubSocket.sendMore("A".getBytes());
-            pubSocket.send("AHALLO");
-            System.out.println("message.Message sent");
-
-        }
-        Thread.sleep(2000);
-        run = false;
-        ctx1.close();
-        ctx2.close();
-    }
 }

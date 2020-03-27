@@ -3,26 +3,33 @@ package util;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-import java.nio.charset.StandardCharsets;
+public class AsyncSubSocket implements Runnable {
 
-public class AsyncReceiveSocket implements Runnable {
-
-    private IAsyncSocketReceiver callback;
-    private ZContext context = new ZContext();
+    private IAsyncSubSocketCallback callback;
+    private ZContext context;
     private ZMQ.Socket socket;
     private boolean doRun = true;
     private int receiveTimeoutMS;
     private String topic;
-    private static final boolean doPrint = true;
+    private static final boolean doPrint = false;
+    private String address;
 
-    public AsyncReceiveSocket(IAsyncSocketReceiver callback, String address, String topic, int receiveTimeoutMS) {
+    public AsyncSubSocket(IAsyncSubSocketCallback callback, String address, String topic, int receiveTimeoutMS) {
         this.callback = callback;
-        this.socket = context.createSocket(ZMQ.SUB);
-        socket.connect(address);
-        socket.subscribe(topic.getBytes(StandardCharsets.UTF_8));
-        socket.setReceiveTimeOut(receiveTimeoutMS);
-        this.receiveTimeoutMS = receiveTimeoutMS;
+        this.address = address;
         this.topic = topic;
+        this.receiveTimeoutMS = receiveTimeoutMS;
+        this.context = new ZContext();
+        this.socket = context.createSocket(ZMQ.SUB);
+        socket.setReceiveTimeOut(receiveTimeoutMS);
+
+        socket.connect(address);
+        socket.subscribe(topic.getBytes());
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getTopic() {
@@ -47,16 +54,18 @@ public class AsyncReceiveSocket implements Runnable {
     public void run() {
         print("Starting...");
         while (doRun) {
+            //print("Receive...");
             String s = socket.recvStr();
-            print(s);
+            //print(s);
             if (s != null && !s.isEmpty()) {
-                callback.newMessage(s.replaceFirst(this.topic, ""), this.topic);
+                print(s);
+                callback.newMessage(s.replaceFirst(this.topic + PubSocket.TOPIC_SUFFIX, ""), this.topic);
             }
         }
     }
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[AsyncRSocket][" + topic + "] " + message);
+            System.out.println("[AsyncRSocket][" + topic + "][" + address + "] " + message);
     }
 }
