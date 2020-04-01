@@ -3,12 +3,13 @@ package joinnetwork;
 import client.KEManager;
 import message.JNChallengeMessage;
 import message.JNResponseMessage;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
-import sawtooth.sdk.signing.PrivateKey;
-import util.PubSocket;
 import util.Utilities;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.security.SignatureException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -52,71 +53,43 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
     @Override
     public void run() {
         print("Starting for applicant " + applID);
-        String currentTopic = applID;
-        // ZContext context = new ZContext();
 
-        //PubSocket pubSocket = new PubSocket(address);
-        //print("Sockets created");
-
-        ZContext context = new ZContext();
-
-        ZMQ.Socket socket = context.createSocket(ZMQ.PAIR);
-        socket.bind("tcp://*:5555");
-
-        // Send a challenge with a nonce to authenticate the applicant
-        // Moreover, send our public key and a signature for the nonce so the applicant can verify us
-        String nonce = Utilities.generateNonce(NONCE_SIZE_IN_CHARS);
-        String signature = Utilities.sign(nonce, myPrivateKey);
-
-        JNChallengeMessage message = new JNChallengeMessage(myPublicKeyHex, nonce, signature, myID);
-
+        // Connect to the server at the address+port
         try {
-            Thread.sleep(1500);
-        } catch (InterruptedException e) {
+            Socket socket = new Socket("localhost", 5555);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // Send a challenge with a nonce to authenticate the applicant
+            // Moreover, send our public key and a signature for the nonce so the applicant can verify us
+            String nonce = Utilities.generateNonce(NONCE_SIZE_IN_CHARS);
+
+            JNChallengeMessage message = new JNChallengeMessage(myPublicKeyHex, nonce, myID);
+            message.setSignature(Utilities.sign(message.getSignablePayload(), myPrivateKey));
+            out.println(message.toString());
+            print("Sent challenge: " + message.toString());
+
+            // Wait for their response with the nonce and their signature for that nonce
+            // so we can verify they own the private key for the public key they claim to be
+            String recv = in.readLine();
+            JNResponseMessage response;
+            response = Utilities.deserializeMessage(recv, JNResponseMessage.class);
+
+            boolean valid = Utilities.verify(response.getSignablePayload(), response.getSignature(), applPublicKey);
+
+            if (valid) {
+                out.println("OK!!!");
+                //pubSocket.send("OK!!!", currentTopic);
+
+                callback.votingRequired(applID, applPublicKey);
+            } else {
+                callback.error(new SignatureException("Provided public key did not match signature!"));
+                return;
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        for (int i = 0; i < 3; i++) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            socket.send(message.toString());
-            print("Sent challenge " + message.toString());
-        }
-        //socket.send(message.toString());
-        //pubSocket.send(message.toString(), currentTopic);
 
-
-        // Wait for their response with the nonce and their signature for that nonce
-        // so we can verify they own the private key for the public key they claim to be
-
-     /*   ZMQ.Socket subSocket = context.createSocket(ZMQ.SUB);
-        subSocket.setReceiveTimeOut(RECEIVE_TIMEOUT_MS);
-        subSocket.connect(address); // TODO address already in use
-        subSocket.subscribe((currentTopic + PubSocket.TOPIC_SUFFIX).getBytes());
-
-        String recv = subSocket.recvStr(); */
-        JNResponseMessage response;
-        while (true) {
-            String recv = socket.recvStr();
-
-            response = Utilities.deserializeMessage(recv, JNResponseMessage.class);
-            //if (response == null) return; // TODO callback.error() ?
-            if (response != null) break;
-        }
-
-        boolean valid = Utilities.verify(response.getSignablePayload(), response.getSignature(), applPublicKey);
-
-        if (valid) {
-            socket.send("OK!!!");
-            //pubSocket.send("OK!!!", currentTopic);
-
-            callback.votingRequired(applID, applPublicKey);
-        } else {
-            callback.error(new SignatureException("Provided public key did not match signature!"));
-            return;
-        }
 
         // Wait for voting
         try {

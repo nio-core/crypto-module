@@ -1,8 +1,6 @@
 import client.HyperZMQStub;
 import client.KEManager;
 import org.junit.Test;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 public class JoinNetworkTest {
 
@@ -16,11 +14,12 @@ public class JoinNetworkTest {
 
         Thread.sleep(1000);
 
-        memberClient.handleJoinNetwork(joinClient.getRequest());
-        Thread.sleep(300);
+        //memberClient.handleJoinNetwork(joinClient.getRequest());
+        //Thread.sleep(300);
         joinClient.sendJoinRequest(address);
 
-        while(true) {}
+        while (true) {
+        }
 
     }
 

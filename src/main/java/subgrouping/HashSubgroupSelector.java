@@ -1,6 +1,5 @@
 package subgrouping;
 
-import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -8,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * This implementation selects a subgroup by hashing the input generating a stream of unsigned integer values i0, i1, ...iX for X = input.size()

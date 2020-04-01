@@ -4,14 +4,15 @@ import client.KEManager;
 import message.JNChallengeMessage;
 import message.JNRequestMessage;
 import message.JNResponseMessage;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
-import sawtooth.sdk.signing.PrivateKey;
-import util.AsyncSubSocket;
 import util.PubSocket;
 import util.Utilities;
 
-import java.security.SignatureException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 /**
  * The Thread for an applicant that wants to join the network.
@@ -44,74 +45,54 @@ public class JNApplicantThread implements Runnable {
 
     @Override
     public void run() {
-        print("Starting...");
+
         // Send a JoinNetworkRequestMessage to the "join network" topic initially
 
-        //PubSocket pubSocket = new PubSocket(address);
-        /*
-        ZContext context2 = new ZContext();
-        ZMQ.Socket pubSocket = context2.createSocket(ZMQ.PUB);
-        pubSocket.bind(address);
+        PubSocket pubSocket = new PubSocket(address);
         JNRequestMessage message1 = new JNRequestMessage(myID, myPublicKey);
-
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        pubSocket.send(KEManager.JOIN_SAWTOOTH_NETWORK_TOPIC + PubSocket.TOPIC_SUFFIX + message1.toString() );
-        pubSocket.close();
-        //pubSocket.send(message1.toString(), KEManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
-
+        pubSocket.send(message1.toString(), KEManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
+        print("Sent join request");
         //print("sent message:" + message1.toString());
 
-        */
-        // Listen to myID topic for a response
-        String currentTopic = myID;
-        ZContext context = new ZContext();
-        /*ZMQ.Socket subsocket = context.createSocket(ZMQ.SUB);
-        subsocket.setReceiveTimeOut(RECEIVE_TIMEOUT_MS);
-        subsocket.connect(address);
-        print("Subscribing " + currentTopic + PubSocket.TOPIC_SUFFIX);
-        subsocket.subscribe((currentTopic + PubSocket.TOPIC_SUFFIX).getBytes()); */
-
-        ZMQ.Socket socket = context.createSocket(ZMQ.PAIR);
-        socket.connect(address);
+        // Im the server
         try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
+            print("Starting server");
+            ServerSocket serverSocket = new ServerSocket(5555);
+            Socket clientSocket = serverSocket.accept();
+
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            print("Listening for challenge...");
+
+            String s = in.readLine();
+            print("Received: " + s);
+            JNChallengeMessage challenge = Utilities.deserializeMessage(s, JNChallengeMessage.class);
+            if (challenge == null) return; // TODO
+
+            // Verify the network member
+            boolean verified = Utilities.verify(challenge.getSignablePayload(),
+                    challenge.getSignature(),
+                    challenge.getMemberPublicKey());
+
+            if (!verified) {
+                print("Signature verification failed!");
+                return; // TODO
+            }
+            print("Signature verified");
+
+            // Sign the nonce and create response
+            JNResponseMessage response = new JNResponseMessage(challenge.getNonce(),
+                    Utilities.sign(challenge.getNonce(), myPrivateKey));
+            out.println(response.toString());
+            print("Sent response: " + response);
+            // Wait for ok
+            s = in.readLine();
+            print(s);
+        } catch (IOException e) {
             e.printStackTrace();
+            return;
         }
-        print("Listening for challenge...");
-        //String s = subsocket.recvStr();
-        String s = socket.recvStr();
-        if (s == null || s.isEmpty()) {
-            print("received nothing");
-            return; // TODO
-        }
-        print("Received: " + s);
-        JNChallengeMessage challenge = Utilities.deserializeMessage(s, JNChallengeMessage.class);
-        if (challenge == null) return; // TODO
-
-        // Verify the network member
-        boolean verified = Utilities.verify(challenge.getSignablePayload(),
-                challenge.getSignature(),
-                challenge.getMemberPublicKey());
-
-        if (!verified) {
-            print("Signature verification failed!");
-            return; // TODO
-        }
-
-        // Sign the nonce and create response
-        JNResponseMessage response = new JNResponseMessage(challenge.getNonce(),
-                Utilities.sign(challenge.getNonce(), myPrivateKey));
-        //pubSocket.send(response.toString(), currentTopic);
-        socket.send(response.toString());
-        // Wait for ok
-        //s = subsocket.recvStr();
-        s = socket.recvStr();
-        print(s);
     }
 
     void print(String message) {

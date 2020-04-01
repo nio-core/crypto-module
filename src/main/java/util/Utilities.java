@@ -5,7 +5,6 @@ import com.google.gson.JsonSyntaxException;
 import org.bitcoinj.core.Utils;
 import sawtooth.sdk.signing.*;
 
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
 public class Utilities {
@@ -16,12 +15,15 @@ public class Utilities {
     }
 
     public static String sign(String message, PrivateKey privateKey) {
+        System.out.println("Signing " + message);
         return new Secp256k1Context().sign(message.getBytes(), privateKey);
     }
 
     public static boolean verify(String message, String signature, String publicKey) {
+        System.out.println("verifying " + message + " with signature=" + signature + ", pub=" + publicKey);
         PublicKey publicKey1 = new Secp256k1PublicKey(Utils.HEX.decode(publicKey));
-        return verify(message, signature, publicKey);
+        System.out.println("Publickey: " + publicKey1.hex());
+        return verify(message, signature, publicKey1);
     }
 
     public static boolean verify(String message, String signature, PublicKey publicKey) {

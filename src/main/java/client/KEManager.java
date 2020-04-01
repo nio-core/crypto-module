@@ -4,7 +4,7 @@ import joinnetwork.IJNMember;
 import joinnetwork.JNApplicantThread;
 import joinnetwork.JNMemberThread;
 import message.JNRequestMessage;
-import sawtooth.sdk.signing.*;
+import sawtooth.sdk.signing.PublicKey;
 import util.AsyncSubSocket;
 import util.IAsyncSubSocketCallback;
 import util.Utilities;

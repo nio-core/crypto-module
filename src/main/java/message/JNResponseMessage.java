@@ -1,6 +1,7 @@
 package message;
 
 import com.google.gson.Gson;
+import txprocessor.ISignablePayload;
 
 public class JNResponseMessage implements ISignablePayload {
 
