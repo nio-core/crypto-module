@@ -45,7 +45,6 @@ public class JNApplicantThread implements Runnable {
 
     @Override
     public void run() {
-
         // Send a JoinNetworkRequestMessage to the "join network" topic initially
 
         PubSocket pubSocket = new PubSocket(address);

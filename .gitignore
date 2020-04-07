@@ -23,3 +23,6 @@
 hs_err_pid*
 .idea/*
 *.kotlin_module
+*.lst
+keystore.jks
+data.dat

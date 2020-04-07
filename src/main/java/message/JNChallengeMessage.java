@@ -1,9 +1,8 @@
 package message;
 
 import com.google.gson.Gson;
-import txprocessor.ISignablePayload;
 
-public class JNChallengeMessage implements ISignablePayload {
+public class JNChallengeMessage implements txprocessor.ISignablePayload {
 
     private String memberPublicKey;
     private String nonce;

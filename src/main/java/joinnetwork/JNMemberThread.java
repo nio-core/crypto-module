@@ -74,7 +74,7 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
             String recv = in.readLine();
             JNResponseMessage response;
             response = Utilities.deserializeMessage(recv, JNResponseMessage.class);
-
+            if (response == null) return; // TODO
             boolean valid = Utilities.verify(response.getSignablePayload(), response.getSignature(), applPublicKey);
 
             if (valid) {
