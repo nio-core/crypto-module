@@ -27,4 +27,8 @@ public class HyperZMQStub {
     void send() {
 
     }
+
+    public String getClientID() {
+        return "hyperzmq";
+    }
 }

@@ -14,6 +14,7 @@ public class Envelope {
     public static final String MESSAGETYPE_CONTRACT = "contract";
     public static final String MESSAGETYPE_TEXT = "text";
     public static final String MESSAGETYPE_CONTRACT_RECEIPT = "contract_receipt";
+    public static final String MESSAGETYPE_VOTING_MATTER = "votingmatter";
 
     public Envelope(@Nonnull String sender, @Nonnull String type, @Nonnull String rawMessage) {
         this.sender = sender;

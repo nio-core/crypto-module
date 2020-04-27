@@ -1,4 +1,4 @@
-package client;
+package contracts;
 
 import contracts.ContractReceipt;
 

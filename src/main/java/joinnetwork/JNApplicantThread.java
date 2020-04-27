@@ -1,9 +1,10 @@
 package joinnetwork;
 
-import client.KEManager;
+import client.JNManager;
 import message.JNChallengeMessage;
 import message.JNRequestMessage;
 import message.JNResponseMessage;
+import sawtooth.sdk.signing.Signer;
 import util.PubSocket;
 import util.Utilities;
 
@@ -13,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 /**
  * The Thread for an applicant that wants to join the network.
@@ -25,20 +27,20 @@ public class JNApplicantThread implements Runnable {
 
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
-    String address; // TODO sub/pub different addresses?
-    String myID;
-    String myPublicKey;
-    String myPrivateKey;
+    private String address; // TODO sub/pub different addresses?
+    private String myID;
+    private String myPublicKey;
+    private Signer mySigner;
 
-    KEManager client;
+    private JNManager client;
 
     private final boolean doPrint = true;
 
-    public JNApplicantThread(String myID, String myPublicKey, String myPrivateKey, KEManager client,
+    public JNApplicantThread(String myID, String myPublicKey, Signer mySigner, JNManager client,
                              String address) {
         this.myID = myID;
         this.myPublicKey = myPublicKey;
-        this.myPrivateKey = myPrivateKey;
+        this.mySigner = mySigner;
         this.client = client;
         this.address = address;
     }
@@ -49,7 +51,7 @@ public class JNApplicantThread implements Runnable {
 
         PubSocket pubSocket = new PubSocket(address);
         JNRequestMessage message1 = new JNRequestMessage(myID, myPublicKey);
-        pubSocket.send(message1.toString(), KEManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
+        pubSocket.send(message1.toString(), JNManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
         print("Sent join request");
         //print("sent message:" + message1.toString());
 
@@ -82,7 +84,7 @@ public class JNApplicantThread implements Runnable {
 
             // Sign the nonce and create response
             JNResponseMessage response = new JNResponseMessage(challenge.getNonce(),
-                    Utilities.sign(challenge.getNonce(), myPrivateKey));
+                    mySigner.sign(challenge.getNonce().getBytes(StandardCharsets.UTF_8)));
             out.println(response.toString());
             print("Sent response: " + response);
             // Wait for ok

@@ -103,17 +103,6 @@ public class SawtoothUtils {
         }
     }
 
-    public static String generateNonce(int characterCount) {
-        int leftLimit = 48; // '0'
-        int rightLimit = 122; // 'z'
-
-        return new SecureRandom().ints(leftLimit, rightLimit + 1)
-                .filter(i -> (i <= 57 || i >= 65) && (i <= 90 || i >= 97))
-                .limit(characterCount)
-                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                .toString();
-    }
-
     private static void print(String message) {
         if (doPrint)
             System.out.println("[SawtoothUtils] " + message);

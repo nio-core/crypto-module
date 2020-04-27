@@ -12,26 +12,25 @@ import util.Utilities;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class KEManager implements IJNMember, IAsyncSubSocketCallback {
+public class JNManager implements IJNMember, IAsyncSubSocketCallback {
 
-    String clientID;
-    PublicKey theirPubkey;
-    HyperZMQStub hyHyperZMQStub;
+    private final String clientID;
+    private final HyperZMQ hyperZMQ;
 
-    ExecutorService jnApplicantExService = Executors.newFixedThreadPool(2);
-    ExecutorService jnMemberExService = Executors.newFixedThreadPool(2);
-    ExecutorService jnListenerExService = Executors.newSingleThreadExecutor();
-    String joinNetworkAddress;
+    private ExecutorService jnApplicantExService = Executors.newFixedThreadPool(2);
+    private ExecutorService jnMemberExService = Executors.newFixedThreadPool(2);
+    private ExecutorService jnListenerExService = Executors.newSingleThreadExecutor();
+    private final String joinNetworkAddress;
 
-    AsyncSubSocket jnSubSocket;
+    private AsyncSubSocket jnSubSocket;
     private static final int JOIN_NETWORK_RECEIVE_TIMEOUT_MS = 5000;
 
     public static final String JOIN_SAWTOOTH_NETWORK_TOPIC = "JOIN_NETWORK";
     private boolean doPrint = true;
 
-    public KEManager(String clientID, HyperZMQStub hyperZMQStub, String joinNetworkAddress) {
-        this.clientID = clientID;
-        this.hyHyperZMQStub = hyperZMQStub;
+    public JNManager(HyperZMQ hyperZMQ, String joinNetworkAddress) {
+        this.clientID = hyperZMQ.getClientID();
+        this.hyperZMQ = hyperZMQ;
         this.joinNetworkAddress = joinNetworkAddress;
         this.jnSubSocket = new AsyncSubSocket(this, joinNetworkAddress, JOIN_SAWTOOTH_NETWORK_TOPIC,
                 JOIN_NETWORK_RECEIVE_TIMEOUT_MS);
@@ -39,14 +38,14 @@ public class KEManager implements IJNMember, IAsyncSubSocketCallback {
     }
 
     public JNRequestMessage getRequest() {
-        return new JNRequestMessage(clientID, hyHyperZMQStub.getPublicKey().hex());
+        return new JNRequestMessage(clientID, hyperZMQ.getSawtoothPublicKey());
     }
 
     public void sendJoinRequest(String addr) {
         // TODO use address
         JNApplicantThread t = new JNApplicantThread(clientID,
-                hyHyperZMQStub.getPublicKey().hex(),
-                hyHyperZMQStub.getPrivateKey().hex(),
+                hyperZMQ.getSawtoothPublicKey(),
+                hyperZMQ.getSawtoothSigner(),
                 this,
                 joinNetworkAddress);
 
@@ -85,8 +84,8 @@ public class KEManager implements IJNMember, IAsyncSubSocketCallback {
                 this.joinNetworkAddress,
                 message.getApplicantID(),
                 message.getApplicantPublicKey(),
-                this.hyHyperZMQStub.getPrivateKey().hex(),
-                this.hyHyperZMQStub.getPublicKey().hex(),
+                hyperZMQ.getSawtoothSigner(),
+                hyperZMQ.getSawtoothPublicKey(),
                 this);
 
         jnMemberExService.submit(t);
@@ -94,6 +93,6 @@ public class KEManager implements IJNMember, IAsyncSubSocketCallback {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[KEManager][" + clientID + "] " + message);
+            System.out.println("[JNManager][" + clientID + "] " + message);
     }
 }

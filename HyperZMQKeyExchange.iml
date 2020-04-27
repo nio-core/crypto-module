@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/HyperZMQ/sawtooth-sdk-transaction-processor/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/HyperZMQ/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/sawtooth-sdk-transaction-processor/src/main/java" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

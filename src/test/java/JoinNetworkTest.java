@@ -1,5 +1,6 @@
+import client.HyperZMQ;
 import client.HyperZMQStub;
-import client.KEManager;
+import client.JNManager;
 import org.junit.Test;
 
 public class JoinNetworkTest {
@@ -8,9 +9,11 @@ public class JoinNetworkTest {
 
     @Test
     public void testJoining() throws InterruptedException {
+        HyperZMQ join = new HyperZMQ("joinClient", "password", true);
+        HyperZMQ member = new HyperZMQ("memberClient", "password", true);
         String address = "tcp://127.0.0.1:5555";
-        KEManager joinClient = new KEManager("joinClient", new HyperZMQStub(), address);
-        KEManager memberClient = new KEManager("memberClient", new HyperZMQStub(), address);
+        JNManager joinClient = new JNManager(join, address);
+        JNManager memberClient = new JNManager(member, address);
 
         Thread.sleep(1000);
 
@@ -20,27 +23,5 @@ public class JoinNetworkTest {
 
         while (true) {
         }
-
     }
-
-    @Test
-    public void testSign() {
-        /*
-        Context context = new Secp256k1Context();
-        PrivateKey privateKey = context.newRandomPrivateKey();
-        System.out.println("Privatekey: " + privateKey.hex());
-        byte[] message = "hallo".getBytes();
-
-        String signature = context.sign(message, privateKey);
-        System.out.println("Signature: " + signature);
-
-        PublicKey publicKey = context.getPublicKey(privateKey);
-        System.out.println("Publickey: " + publicKey.hex());
-
-        boolean isValid = context.verify(signature, message, publicKey);
-        System.out.println("isValid: " + isValid);
-        */
-    }
-
-
 }

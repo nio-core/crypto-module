@@ -1,8 +1,9 @@
 package joinnetwork;
 
-import client.KEManager;
+import client.JNManager;
 import message.JNChallengeMessage;
 import message.JNResponseMessage;
+import sawtooth.sdk.signing.Signer;
 import util.Utilities;
 
 import java.io.BufferedReader;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -26,7 +28,7 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
     private String applPublicKey;
     private IJNMember callback;
     private String address;
-    private String myPrivateKey;
+    private Signer mySigner;
     private String myPublicKeyHex;
     private static final int NONCE_SIZE_IN_CHARS = 32;
     private static final int SOCKET_TIMEOUT_S = 60;
@@ -38,16 +40,16 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
     private final boolean doPrint = true;
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
-    public JNMemberThread(String myID, String address, String applID, String applPublicKey, String myPrivateKey,
+    public JNMemberThread(String myID, String address, String applID, String applPublicKey, Signer mySigner,
                           String myPublicKeyHex, IJNMember callback) {
         this.myID = myID;
         this.address = address;
         this.applID = applID;
         this.applPublicKey = applPublicKey;
-        this.myPrivateKey = myPrivateKey;
+        this.mySigner = mySigner;
         this.myPublicKeyHex = myPublicKeyHex;
         this.callback = callback;
-        this.topic_prefix = applID + KEManager.JOIN_SAWTOOTH_NETWORK_TOPIC;
+        this.topic_prefix = applID + JNManager.JOIN_SAWTOOTH_NETWORK_TOPIC;
     }
 
     @Override
@@ -65,7 +67,7 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
             String nonce = Utilities.generateNonce(NONCE_SIZE_IN_CHARS);
 
             JNChallengeMessage message = new JNChallengeMessage(myPublicKeyHex, nonce, myID);
-            message.setSignature(Utilities.sign(message.getSignablePayload(), myPrivateKey));
+            message.setSignature(mySigner.sign(message.getSignablePayload().getBytes(StandardCharsets.UTF_8)));
             out.println(message.toString());
             print("Sent challenge: " + message.toString());
 
