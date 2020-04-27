@@ -1,7 +1,7 @@
 package diffiehellman;
 
 import client.SawtoothUtils;
-import util.Utilities;
+import sawtooth.sdk.signing.Signer;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.SecretKey;
@@ -14,19 +14,21 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 
 
-public class DHKeyExchange implements Callable<SecretKey> {
+public class DHKeyExchange implements Callable<EncryptedStream> {
 
     private static final String DH = "DH";
     private final String AES = "AES";
     private String myID;
-    private String myPrivateKey;
+    private Signer signer;
     private String theirPublicKey;
     private String address;
     private boolean isServer;
@@ -35,9 +37,9 @@ public class DHKeyExchange implements Callable<SecretKey> {
     private BufferedReader in;
     boolean doPrint = false;
 
-    public DHKeyExchange(String myID, String myPrivateKey, String theirPublicKey, String address, int port, boolean isServer) {
+    public DHKeyExchange(String myID, Signer mySigner, String theirPublicKey, String address, int port, boolean isServer) {
         this.myID = myID;
-        this.myPrivateKey = myPrivateKey;
+        this.signer = mySigner;
         this.theirPublicKey = theirPublicKey;
         this.address = address;
         this.port = port;
@@ -47,7 +49,7 @@ public class DHKeyExchange implements Callable<SecretKey> {
     // TODO: improve error handling
 
     @Override
-    public SecretKey call() throws Exception {
+    public EncryptedStream call() throws Exception {
         // Setup sockets and streams
         Socket socket;
         if (isServer) {
@@ -64,7 +66,7 @@ public class DHKeyExchange implements Callable<SecretKey> {
         return (isServer ? doServer() : doClient());
     }
 
-    private SecretKey doServer() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidAlgorithmParameterException, InvalidKeyException, SignatureException {
+    private EncryptedStream doServer() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidAlgorithmParameterException, InvalidKeyException, SignatureException {
         PublicKey publicKey = retrievePublicKey();
         if (publicKey == null) return null; // TODO
         DHParameterSpec dhParameterSpec = ((DHPublicKey) publicKey).getParams();
@@ -85,21 +87,22 @@ public class DHKeyExchange implements Callable<SecretKey> {
 
         // Create the shared secret key
         keyAgreement.doPhase(publicKey, true);
-        byte[] encodedKey = keyAgreement.generateSecret();
+        // Shorten to 32 byte size for max AES length
+        byte[] encodedKey = Arrays.copyOfRange(keyAgreement.generateSecret(), 0, 32);
         SecretKey secretKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, AES);
         print("SecretKey created: " + Base64.getEncoder().encodeToString(secretKey.getEncoded()));
-        return secretKey;
+        return new EncryptedStream(in, out, secretKey);
     }
 
     private DHMessage makeDHMessage(PublicKey publicKey) {
         byte[] bytes = publicKey.getEncoded();
         String strPublicKey = Base64.getEncoder().encodeToString(bytes);
         DHMessage message = new DHMessage(strPublicKey, myID);
-        message.setSignature(SawtoothUtils.sign(message.getSignablePayload(), myPrivateKey));
+        message.setSignature(signer.sign(message.getSignablePayload().getBytes(StandardCharsets.UTF_8)));
         return message;
     }
 
-    private SecretKey doClient() throws NoSuchAlgorithmException, InvalidKeyException, IOException, InvalidKeySpecException, SignatureException {
+    private EncryptedStream doClient() throws NoSuchAlgorithmException, InvalidKeyException, IOException, InvalidKeySpecException, SignatureException {
         // The client does the first move by sending its part to the server
         // While the server waits for the agreement object to create its own
 
@@ -124,10 +127,11 @@ public class DHKeyExchange implements Callable<SecretKey> {
         if (publicKey == null) return null; //TODO
         // Combine the two parts and generate the secret key
         agreement.doPhase(publicKey, true);
-        byte[] encodedKey = agreement.generateSecret();
+        // Shorten to 32 byte size for max AES length
+        byte[] encodedKey = Arrays.copyOfRange(agreement.generateSecret(), 0, 32);
         SecretKey secretKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, AES);
         print("SecretKey created: " + Base64.getEncoder().encodeToString(secretKey.getEncoded()));
-        return secretKey;
+        return new EncryptedStream(in, out, secretKey);
     }
 
     /**
@@ -141,11 +145,11 @@ public class DHKeyExchange implements Callable<SecretKey> {
     private PublicKey retrievePublicKey() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException {
         // Receive, verify and recreate
         String s = in.readLine();
-        DHMessage received = Utilities.deserializeMessage(s, DHMessage.class);
+        DHMessage received = SawtoothUtils.deserializeMessage(s, DHMessage.class);
         if (received == null) return null;
 
         print("message received, verifying...");
-        boolean verified = SawtoothUtils.verify(received.getSignature(), received.getSignablePayload(), theirPublicKey);
+        boolean verified = SawtoothUtils.verify(received.getSignablePayload(), received.getSignature(), theirPublicKey);
         if (!verified) {
             throw new SignatureException("Received message has invalid signature: " + received.toString());
         }
