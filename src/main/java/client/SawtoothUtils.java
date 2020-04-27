@@ -31,6 +31,10 @@ public class SawtoothUtils {
         return Utils.hash512(toHash.getBytes(StandardCharsets.UTF_8));
     }
 
+    public static String hash(byte[] toHash) {
+        return Utils.hash512(toHash);
+    }
+
     /**
      * Build a Sawtooth address from the namespace and a hashable
      *

@@ -2,11 +2,11 @@ package client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.bitcoinj.core.Utils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.protobuf.*;
 import sawtooth.sdk.signing.Signer;
 
@@ -70,7 +70,7 @@ public class BlockchainHelper {
                 .setFamilyVersion(txFamVersion)         // Has to be identical in TP
                 .addOutputs(outputs)
                 .addInputs(input)
-                .setPayloadSha512(Utils.hash512(payload))
+                .setPayloadSha512(SawtoothUtils.hash(payload))
                 .setBatcherPublicKey(signer.getPublicKey().hex())
                 .setNonce(UUID.randomUUID().toString())
                 .build();

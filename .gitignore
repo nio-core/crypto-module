@@ -26,3 +26,5 @@ hs_err_pid*
 *.lst
 keystore.jks
 data.dat
+*.iml
+target/
