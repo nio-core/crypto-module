@@ -16,7 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class CodeExecutingProcessor implements ContractProcessor {
+public class CodeExecutingProcessor implements IContractProcessor {
 
     private final static String SUPPORTED_OPERATION = "javacodeexecution";
 

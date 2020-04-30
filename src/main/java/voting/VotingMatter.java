@@ -4,6 +4,7 @@ import client.SawtoothUtils;
 import com.google.gson.Gson;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class VotingMatter {
 
@@ -15,14 +16,18 @@ public class VotingMatter {
     private final String hash;
     private final VotingMatterType type;
     private final String group; // Group is empty String for VotingMatterType.JOIN_NETWORK
+    private final List<String> desiredVoters;
 
-    public VotingMatter(String applicantID, String applicantPublicKey, String voteDirectorPublicKey, VotingMatterType type, @Nullable String group) {
+
+    public VotingMatter(String applicantID, String applicantPublicKey, String voteDirectorPublicKey, VotingMatterType type, @Nullable String group, List<String> desiredVoters) {
         this.applicantID = applicantID;
         this.applicantPublicKey = applicantPublicKey;
         this.voteDirectorPublicKey = voteDirectorPublicKey;
         this.type = type;
-        this.hash = SawtoothUtils.hash(applicantID + applicantPublicKey + voteDirectorPublicKey + type);
+        this.desiredVoters = desiredVoters;
         this.group = this.type == VotingMatterType.JOIN_GROUP ? (group != null ? group : "") : "";
+        this.hash = SawtoothUtils.hash(this.applicantID + this.applicantPublicKey + this.voteDirectorPublicKey
+                + this.type + this.getDesiredVoters().toString());
     }
 
     public String getApplicantID() {
@@ -47,6 +52,10 @@ public class VotingMatter {
 
     public String getGroup() {
         return group;
+    }
+
+    public List<String> getDesiredVoters() {
+        return desiredVoters;
     }
 
     @Override

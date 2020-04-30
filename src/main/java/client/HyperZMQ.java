@@ -3,13 +3,14 @@ package client;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import contracts.Contract;
-import contracts.ContractProcessingCallback;
-import contracts.ContractProcessor;
+import contracts.IContractProcessingCallback;
+import contracts.IContractProcessor;
 import contracts.ContractReceipt;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
+import jdk.jshell.execution.Util;
 import joingroup.JoinGroupRequest;
-import joingroup.JoinGroupStatusCallback;
+import joingroup.IJoinGroupStatusCallback;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.bitcoinj.core.Utils;
@@ -17,8 +18,8 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.signing.*;
-import voting.VotingMatter;
-import voting.VotingProcess;
+import subgrouping.ISubgroupSelector;
+import voting.*;
 import zmq.io.mechanism.curve.Curve;
 
 import javax.annotation.Nullable;
@@ -38,14 +39,26 @@ public class HyperZMQ implements AutoCloseable {
     private final EventHandler eventHandler;
     private final Crypto crypto;
     private final String clientID;
-    private List<ContractProcessor> contractProcessors = new ArrayList<>();
-    private Map<String, List<GroupCallback>> textmessageCallbacks = new HashMap<>();
-    private Map<String, ContractProcessingCallback> contractCallbacks = new HashMap<>(); // key is the contractID
-    private BlockchainHelper blockchainHelper;
-    private ZContext zContext = new ZContext();
+    private final List<IContractProcessor> contractProcessors = new ArrayList<>();
+    private final Map<String, List<IGroupCallback>> textmessageCallbacks = new HashMap<>();
+    private final Map<String, IContractProcessingCallback> contractCallbacks = new HashMap<>(); // key is the contractID
+    private final BlockchainHelper blockchainHelper;
+    private final ZContext zContext = new ZContext();
 
-    private VotingProcess votingProcessGroup = null;
-    private VotingProcess votingProcessNetwork = null;
+    // Outlet for messages of Vote type received in groups
+    private IGroupVoteReceiver groupVoteReceiver = null;
+
+    // Variables for selecting a subgroup of participants when voting
+    private ISubgroupSelector subgroupSelector = null;
+    private int votingParticipantsThreshold = 5;
+
+    // The VotingProcess implements the behavior for when this client is the vote leader
+    private IVotingProcess votingProcessGroup = null;
+    private IVotingProcess votingProcessNetwork = null;
+
+    // The VotingStrategies implement the behavior for when a vote if required from this client
+    private IVotingStrategy votingStrategyNetwork = null;
+    private IVotingStrategy votingStrategyGroup = null;
 
     // if this is set, passes all contract messages received in a group to all callbacks that are registered
     // also invokes the group callback with ContractReceipt additionally to the ReceiptCallback
@@ -87,11 +100,6 @@ public class HyperZMQ implements AutoCloseable {
     public String sign(String message) {
         Secp256k1Context context = new Secp256k1Context();
         return crypto.getSigner().sign(message.getBytes(UTF_8));
-    }
-
-    public boolean verify(String signature, String message, String publicKey) {
-        PublicKey publicKey1 = new Secp256k1PublicKey(Utils.HEX.decode(publicKey));
-        return new Secp256k1Context().verify(signature, message.getBytes(UTF_8), publicKey1);
     }
 
     /**
@@ -341,7 +349,7 @@ public class HyperZMQ implements AutoCloseable {
         return blockchainHelper.buildAndSendBatch(transactionList);
     }
 
-    public boolean sendContractToChain(String groupName, Contract contract, ContractProcessingCallback callback) {
+    public boolean sendContractToChain(String groupName, Contract contract, IContractProcessingCallback callback) {
         if (callback != null) {
             contractCallbacks.put(contract.getContractID(), callback);
         }
@@ -355,7 +363,7 @@ public class HyperZMQ implements AutoCloseable {
      * @param map       map of contracts and callback
      * @return success
      */
-    public boolean sendContractsToChain(String groupName, Map<Contract, ContractProcessingCallback> map) {
+    public boolean sendContractsToChain(String groupName, Map<Contract, IContractProcessingCallback> map) {
         if (groupName == null || map.isEmpty()) {
             print("Empty group and/or contracts");
             return false;
@@ -392,11 +400,11 @@ public class HyperZMQ implements AutoCloseable {
         return sendSingleEnvelope(groupName, envelope, resultOutputAddr);
     }
 
-    public void addContractProcessor(ContractProcessor contractProcessor) {
+    public void addContractProcessor(IContractProcessor contractProcessor) {
         contractProcessors.add(contractProcessor);
     }
 
-    public void removeContractProcessor(ContractProcessor contractProcessor) {
+    public void removeContractProcessor(IContractProcessor contractProcessor) {
         contractProcessors.remove(contractProcessor);
     }
 
@@ -406,7 +414,7 @@ public class HyperZMQ implements AutoCloseable {
      * @param groupName group name
      * @param callback  callback that is called when a new message arrives
      */
-    public void createGroup(String groupName, GroupCallback callback) {
+    public void createGroup(String groupName, IGroupCallback callback) {
         crypto.createGroup(groupName);
         if (callback != null) {
             putCallback(groupName, callback);
@@ -442,7 +450,7 @@ public class HyperZMQ implements AutoCloseable {
      * @param key       the key in Base64
      * @param callback  callback to be called when a new messages arrives
      */
-    public void addGroup(String groupName, String key, GroupCallback callback) {
+    public void addGroup(String groupName, String key, IGroupCallback callback) {
         crypto.addGroup(groupName, key);
         if (callback != null) {
             putCallback(groupName, callback);
@@ -468,7 +476,7 @@ public class HyperZMQ implements AutoCloseable {
      * @param callback  callback to add
      * @return true if successful, false if error or already existent
      */
-    public boolean addCallbackToGroup(String groupName, GroupCallback callback) {
+    public boolean addCallbackToGroup(String groupName, IGroupCallback callback) {
         return putCallback(groupName, callback);
     }
 
@@ -550,6 +558,16 @@ public class HyperZMQ implements AutoCloseable {
                 }
                 break;
             }
+            case MESSAGETYPE_VOTE: {
+                // Pass the vote to the outlet if one is available
+                if (groupVoteReceiver != null) {
+                    Vote vote = SawtoothUtils.deserializeMessage(envelope.getRawMessage(), Vote.class);
+                    if (vote != null) {
+                        groupVoteReceiver.voteReceived(vote, group);
+                    }
+                }
+                break;
+            }
             default:
                 print("Unknown message type: " + envelope.getType());
                 break;
@@ -586,7 +604,7 @@ public class HyperZMQ implements AutoCloseable {
             print("Cannot convert to ContractReceipt: " + envelope.getRawMessage());
             return;
         }
-        ContractProcessingCallback cb = contractCallbacks.get(receipt.getContract().getContractID());
+        IContractProcessingCallback cb = contractCallbacks.get(receipt.getContract().getContractID());
         if (cb != null) {
             cb.processingFinished(receipt);
         }
@@ -603,7 +621,7 @@ public class HyperZMQ implements AutoCloseable {
         if (clientID.equals(contract.getRequestedProcessor()) || Contract.REQUESTED_PROCESSOR_ANY.equals(contract.getRequestedProcessor())) {
             // Find a processor to handle the message
             Object result = null;
-            for (ContractProcessor processor : contractProcessors) {
+            for (IContractProcessor processor : contractProcessors) {
                 if (processor.getSupportedOperations().contains(contract.getOperation())) {
                     result = processor.processContract(contract);
                     if (result != null) {
@@ -629,17 +647,17 @@ public class HyperZMQ implements AutoCloseable {
 
     private void handleTextMessage(String group, Envelope envelope) {
         // Send the message to all subscribers of that group
-        List<GroupCallback> list = textmessageCallbacks.get(group);
+        List<IGroupCallback> list = textmessageCallbacks.get(group);
         if (list != null) {
             //logprint("Callback(s) found for the group...");
             list.forEach(c -> c.newMessageOnChain(group, envelope.getRawMessage(), envelope.getSender()));
         }
     }
 
-    private boolean putCallback(String groupName, GroupCallback callback) {
+    private boolean putCallback(String groupName, IGroupCallback callback) {
         //logprint("New subscription for group: " + groupName);
         if (textmessageCallbacks.containsKey(groupName)) {
-            List<GroupCallback> list = textmessageCallbacks.get(groupName);
+            List<IGroupCallback> list = textmessageCallbacks.get(groupName);
             if (list.contains(callback)) {
                 //logprint("Subscription skipped, callback already registered.");
                 return false;
@@ -648,7 +666,7 @@ public class HyperZMQ implements AutoCloseable {
                 //logprint("Subscription completed, callback registered to existing group.");
             }
         } else {
-            List<GroupCallback> newList = new ArrayList<>();
+            List<IGroupCallback> newList = new ArrayList<>();
             newList.add(callback);
             textmessageCallbacks.put(groupName, newList);
             return true;
@@ -733,11 +751,11 @@ public class HyperZMQ implements AutoCloseable {
         return clientID;
     }
 
-    public void setVotingProcessGroup(@Nullable VotingProcess votingProcessGroup) {
+    public void setVotingProcessGroup(@Nullable IVotingProcess votingProcessGroup) {
         this.votingProcessGroup = votingProcessGroup;
     }
 
-    public void setVotingProcessNetwork(@Nullable VotingProcess votingProcessNetwork) {
+    public void setVotingProcessNetwork(@Nullable IVotingProcess votingProcessNetwork) {
         this.votingProcessNetwork = votingProcessNetwork;
     }
 
@@ -752,19 +770,18 @@ public class HyperZMQ implements AutoCloseable {
         return crypto.getSigner();
     }
 
-    public void tryJoinGroup(String groupName, @Nullable JoinGroupStatusCallback joinGroupStatusCallback) {
+    public void tryJoinGroup(String groupName, @Nullable IJoinGroupStatusCallback callback) {
         Objects.requireNonNull(groupName);
         // Get the client responsible for the group by checking the entry
         List<String> members = getGroupMembers(groupName);
         if (members.isEmpty()) {
             // TODO
-            System.out.println(groupName + " does not have any members. Try creating the group.");
+            print(groupName + " does not have any members. Try creating the group.");
             return;
         }
 
         String contactPubkey = members.get(members.size() - 1); // Last one to join the group is responsible
-        if (joinGroupStatusCallback != null)
-            joinGroupStatusCallback.joinGroupStatusCallback("found contact: " + contactPubkey);
+        notifyCallback("Found contact: " + contactPubkey, callback);
 
         // TODO get voting args from outside
         String address = "localhost";
@@ -774,8 +791,7 @@ public class HyperZMQ implements AutoCloseable {
                 contactPubkey,
                 groupName,
                 Arrays.asList("hallo", "arg2"), address, port);
-        if (joinGroupStatusCallback != null)
-            joinGroupStatusCallback.joinGroupStatusCallback("Sending request: " + request.toString());
+        notifyCallback("Sending request: " + request.toString(), callback);
 
         Transaction t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
                 "0.1",
@@ -788,14 +804,13 @@ public class HyperZMQ implements AutoCloseable {
         // TODO
         FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
                 getSawtoothSigner(), contactPubkey, address, port, true));
-        if (joinGroupStatusCallback != null)
-            joinGroupStatusCallback.joinGroupStatusCallback("Starting Diffie-Hellmann key exchange");
+        notifyCallback("Starting Diffie-Hellmann key exchange", callback);
         new Thread(server).start();
 
         try (EncryptedStream stream = server.get(3000, TimeUnit.MILLISECONDS)) {
-            joinGroupStatusCallback.joinGroupStatusCallback("Getting group key");
+            notifyCallback("Getting group key", callback);
             String key = stream.readLine();
-            joinGroupStatusCallback.joinGroupStatusCallback("Received group key: " + key);
+            notifyCallback("Received group key: " + key, callback);
             addGroup(request.getGroupName(), key);
         } catch (ExecutionException e) {
             e.printStackTrace();
@@ -806,6 +821,18 @@ public class HyperZMQ implements AutoCloseable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Encapsulate the call on the callback that is possibly null.
+     * If it is null this method does nothing
+     *
+     * @param message
+     * @param callback
+     */
+    private void notifyCallback(String message, @Nullable IJoinGroupStatusCallback callback) {
+        if (callback != null)
+            callback.joinGroupStatusCallback(message);
     }
 
     // TODO add callback
@@ -845,12 +872,107 @@ public class HyperZMQ implements AutoCloseable {
         }
 
         Envelope envelope = new Envelope(this.clientID, MESSAGETYPE_VOTING_MATTER, votingMatter.toString());
-        blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY, "0.1", crypto.encrypt())
+        Transaction t;
+        try {
+            t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
+                    "0.1",
+                    Base64.getDecoder().decode(crypto.encrypt(envelope.toString(), votingMatter.getGroup())),
+                    null);
+        } catch (GeneralSecurityException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Encryption of " + votingMatter.toString() + " failed. Message will not be sent.");
+        }
 
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
     private void handleVotingMatter(String group, Envelope envelope) {
+        VotingMatter matter;
+        try {
+            matter = new Gson().fromJson(envelope.getRawMessage(), VotingMatter.class);
+        } catch (JsonSyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
 
+        if (matter.getDesiredVoters().contains(getSawtoothPublicKey())) {
+            IVotingStrategy strategy = null;
+            // TODO switch new voting stragies here
+            switch (matter.getType()) {
+                case JOIN_GROUP: {
+                    strategy = votingStrategyGroup;
+                    break;
+                }
+                case JOIN_NETWORK: {
+                    strategy = votingStrategyNetwork;
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            if (strategy == null) {
+                // TODO possibly add a fallback strategy or vote no by default?
+                print("No strategy found to vote on the matter: " + matter.toString());
+                return;
+            }
+
+            Vote vote = strategy.castVote(matter, getSawtoothSigner());
+
+            // Send the vote back in the group
+            Envelope env = new Envelope(this.clientID, MESSAGETYPE_VOTE, vote.toString());
+
+            Transaction t;
+            try {
+                t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
+                        "0.1",
+                        Base64.getDecoder().decode(crypto.encrypt(vote.toString(), matter.getGroup())),
+                        null);
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+        } else {
+            print("Received VotingMatter but this clients vote is not required.");
+            return;
+        }
     }
 
+    public IVotingProcess getVotingProcessGroup() {
+        return votingProcessGroup;
+    }
+
+    public IVotingProcess getVotingProcessNetwork() {
+        return votingProcessNetwork;
+    }
+
+    public IVotingStrategy getVotingStrategyNetwork() {
+        return votingStrategyNetwork;
+    }
+
+    public IVotingStrategy getVotingStrategyGroup() {
+        return votingStrategyGroup;
+    }
+
+    public void setVotingStrategyGroup(IVotingStrategy votingStrategyGroup) {
+        this.votingStrategyGroup = votingStrategyGroup;
+    }
+
+    public void setVotingStrategyNetwork(IVotingStrategy votingStrategyNetwork) {
+        this.votingStrategyNetwork = votingStrategyNetwork;
+    }
+
+    public int getVotingParticipantsThreshold() {
+        return votingParticipantsThreshold;
+    }
+
+    public void setSubgroupSelector(ISubgroupSelector selector, int votingParticipantsThreshold) {
+        this.subgroupSelector = selector;
+        this.votingParticipantsThreshold = votingParticipantsThreshold;
+    }
+
+    public void setGroupVoteReceiver(IGroupVoteReceiver groupVoteReceiver) {
+        this.groupVoteReceiver = groupVoteReceiver;
+    }
 }

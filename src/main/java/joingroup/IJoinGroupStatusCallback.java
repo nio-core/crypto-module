@@ -1,5 +1,5 @@
 package joingroup;
 
-public interface JoinGroupStatusCallback {
+public interface IJoinGroupStatusCallback {
     void joinGroupStatusCallback(String status);
 }

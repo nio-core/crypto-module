@@ -2,6 +2,6 @@ package contracts;
 
 import contracts.ContractReceipt;
 
-public interface ContractProcessingCallback {
+public interface IContractProcessingCallback {
     void processingFinished(ContractReceipt contractReceipt);
 }

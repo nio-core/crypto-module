@@ -11,10 +11,13 @@ public class Envelope {
     private final String rawMessage;
     private final String uuid;
 
+    // TODO ENUM
+    // Message types that are possibly received and sent inside a group
     public static final String MESSAGETYPE_CONTRACT = "contract";
     public static final String MESSAGETYPE_TEXT = "text";
     public static final String MESSAGETYPE_CONTRACT_RECEIPT = "contract_receipt";
     public static final String MESSAGETYPE_VOTING_MATTER = "votingmatter";
+    public static final String MESSAGETYPE_VOTE = "vote";
 
     public Envelope(@Nonnull String sender, @Nonnull String type, @Nonnull String rawMessage) {
         this.sender = sender;

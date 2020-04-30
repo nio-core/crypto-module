@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SumContractProcessor implements ContractProcessor {
+public class SumContractProcessor implements IContractProcessor {
 
     private static final String SUPPORTED_OPERATION = "sum";
 

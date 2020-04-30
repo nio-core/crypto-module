@@ -42,7 +42,7 @@ public class CSVStringsHandler implements TransactionHandler {
         namespaces.add(namespace);
         return namespaces;
     }
-
+// TODO change payload layout to have message type visible since some message types do not need to be written to the state
     /**
      * A TRANSACTION CAN BE SENT TO THE TRANSACTION PROCESSOR MULTIPLE TIMES.
      * IT IS IMPORTANT THAT THE APPLY METHOD IS IDEMPOTENT!!!!

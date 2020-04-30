@@ -2,7 +2,7 @@ package contracts;
 
 import java.util.List;
 
-public interface ContractProcessor {
+public interface IContractProcessor {
     Object processContract(Contract contract);
 
     List<String> getSupportedOperations();

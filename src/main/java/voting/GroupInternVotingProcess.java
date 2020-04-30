@@ -1,11 +1,12 @@
 package voting;
 
-import client.GroupCallback;
+import client.IGroupCallback;
 import client.HyperZMQ;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class GroupInternVotingProcess implements VotingProcess, GroupCallback {
+public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final HyperZMQ hyperZMQ;
 
@@ -14,20 +15,27 @@ public class GroupInternVotingProcess implements VotingProcess, GroupCallback {
     }
 
     @Override
-    public boolean vote(VotingMatter votingMatter, List<String> desiredVoters) {
-        // Register group callback to evaluate the votes
-        hyperZMQ.addCallbackToGroup(votingMatter.getGroup(), this);
+    public VotingResult vote(VotingMatter votingMatter, List<String> desiredVoters) {
+        // Register callback to evaluate the votes
+        hyperZMQ.setGroupVoteReceiver(this);
 
         // Send the voting matter to the group
         hyperZMQ.sendVotingMatterInGroup(votingMatter);
 
+        // Prepare the result
+        VotingResult result = new VotingResult(votingMatter, new ArrayList<>());
+
+        while(true) {
+
+            if()
+        }
 
         // Then
-        return false;
+        return null;
     }
 
     @Override
-    public void newMessageOnChain(String group, String message, String senderID) {
+    public void voteReceived(Vote vote, String group) {
 
     }
 }
