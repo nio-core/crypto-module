@@ -1,6 +1,5 @@
 package voting;
 
-import client.IGroupCallback;
 import client.HyperZMQ;
 
 import java.util.ArrayList;
@@ -9,9 +8,12 @@ import java.util.List;
 public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final HyperZMQ hyperZMQ;
+    private VotingResult result;
+    private final int sleepMS;
 
-    public GroupInternVotingProcess(HyperZMQ hyperZMQ) {
+    public GroupInternVotingProcess(HyperZMQ hyperZMQ, int sleepMS) {
         this.hyperZMQ = hyperZMQ;
+        this.sleepMS = sleepMS;
     }
 
     @Override
@@ -23,19 +25,28 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
         hyperZMQ.sendVotingMatterInGroup(votingMatter);
 
         // Prepare the result
-        VotingResult result = new VotingResult(votingMatter, new ArrayList<>());
-
-        while(true) {
-
-            if()
+        result = new VotingResult(votingMatter, new ArrayList<>());
+        boolean run = true;
+        while (run) {
+            try {
+                Thread.sleep(sleepMS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            synchronized (result) {
+                if (result.getVotesSize() >= desiredVoters.size()) {
+                    run = false;
+                }
+            }
         }
-
-        // Then
-        return null;
+        return result;
     }
 
     @Override
     public void voteReceived(Vote vote, String group) {
-
+        System.out.println("Received vote: " + toString());
+        synchronized (result) {
+            result.addVote(vote);
+        }
     }
 }

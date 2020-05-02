@@ -17,7 +17,13 @@ public class VotingResult {
 
     // Make it possible to aggregate the Votes over time
     public void addVote(Vote vote) {
-        votes.add(vote);
+        System.out.println("checking vote: " + vote.toString());
+        if (votes.stream().noneMatch(v ->
+                v.getSignablePayload().equals(vote.getSignablePayload()) && v.getSignature().equals(vote.getSignature()))) {
+            System.out.println("adding vote");
+            votes.add(vote);
+        }
+
     }
 
     public int getVotesSize() {

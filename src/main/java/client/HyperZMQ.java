@@ -807,7 +807,7 @@ public class HyperZMQ implements AutoCloseable {
         notifyCallback("Starting Diffie-Hellmann key exchange", callback);
         new Thread(server).start();
 
-        try (EncryptedStream stream = server.get(3000, TimeUnit.MILLISECONDS)) {
+        try (EncryptedStream stream = server.get(10000, TimeUnit.MILLISECONDS)) {
             notifyCallback("Getting group key", callback);
             String key = stream.readLine();
             notifyCallback("Received group key: " + key, callback);

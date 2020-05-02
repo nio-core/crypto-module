@@ -27,12 +27,12 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
 
     private static final String DH = "DH";
     private final String AES = "AES";
-    private String myID;
-    private Signer signer;
-    private String theirPublicKey;
-    private String address;
-    private boolean isServer;
-    private int port;
+    private final String myID;
+    private final Signer signer;
+    private final String theirPublicKey;
+    private final String address;
+    private final boolean isServer;
+    private final int port;
     private PrintWriter out;
     private BufferedReader in;
     boolean doPrint = false;
@@ -94,7 +94,7 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
         return new EncryptedStream(in, out, secretKey);
     }
 
-    private DHMessage makeDHMessage(PublicKey publicKey) {
+    private DHMessage makeDHMessage(java.security.PublicKey publicKey) {
         byte[] bytes = publicKey.getEncoded();
         String strPublicKey = Base64.getEncoder().encodeToString(bytes);
         DHMessage message = new DHMessage(strPublicKey, myID);
