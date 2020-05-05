@@ -25,7 +25,7 @@ public class SawtoothUtils {
 
     //private static final String HEX_CHARACTERS = "0123456789ABCDEF";
     private static final String HEX_CHARACTERS = "0123456789abcdef";
-    private static boolean doPrint = false;
+    private static boolean doPrint = true;
 
     public static String hash(String toHash) {
         return Utils.hash512(toHash.getBytes(StandardCharsets.UTF_8));
@@ -72,14 +72,15 @@ public class SawtoothUtils {
     }
 
     public static String sign(String message, PrivateKey privateKey) {
-        System.out.println("Signing " + message);
+        print("Signing " + message);
+        print("Using private key:" + privateKey.hex());
         return new Secp256k1Context().sign(message.getBytes(), privateKey);
     }
 
     public static boolean verify(String message, String signature, String publicKey) {
-        System.out.println("verifying " + message + " with signature=" + signature + ", pub=" + publicKey);
+        print("verifying " + message + " with signature=" + signature + ", pub=" + publicKey);
         PublicKey publicKey1 = new Secp256k1PublicKey(hexDecode(publicKey));
-        System.out.println("Publickey: " + publicKey1.hex());
+        print("Publickey: " + publicKey1.hex());
         return verify(message, signature, publicKey1);
     }
 
@@ -105,7 +106,7 @@ public class SawtoothUtils {
 
     private static void print(String message) {
         if (doPrint)
-            System.out.println("[SawtoothUtils] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "]" + "[SawtoothUtils] " + message);
     }
 
 }

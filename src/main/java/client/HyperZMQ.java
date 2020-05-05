@@ -694,7 +694,7 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     protected void print(String message) {
-        System.out.println("[" + clientID + "]  " + message);
+        System.out.println("[" + Thread.currentThread().getId() + "]" + "[" + clientID + "]  " + message);
     }
 
     public void setValidatorURL(String url) {
@@ -781,7 +781,7 @@ public class HyperZMQ implements AutoCloseable {
         }
 
         String contactPubkey = members.get(members.size() - 1); // Last one to join the group is responsible
-        notifyCallback("Found contact: " + contactPubkey, callback);
+        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, contactPubkey, callback);
 
         // TODO get voting args from outside
         String address = "localhost";
@@ -791,7 +791,7 @@ public class HyperZMQ implements AutoCloseable {
                 contactPubkey,
                 groupName,
                 Arrays.asList("hallo", "arg2"), address, port);
-        notifyCallback("Sending request: " + request.toString(), callback);
+
 
         Transaction t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
                 "0.1",
@@ -799,22 +799,24 @@ public class HyperZMQ implements AutoCloseable {
                 null);
 
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+        notifyCallback(IJoinGroupStatusCallback.REQUEST_SENT, request.toString(), callback);
 
         // Now wait for the contact to perform key exchange
         // TODO
         FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
                 getSawtoothSigner(), contactPubkey, address, port, true));
-        notifyCallback("Starting Diffie-Hellmann key exchange", callback);
+        notifyCallback(IJoinGroupStatusCallback.STARTING_DIFFIE_HELLMAN, null, callback);
         new Thread(server).start();
 
         try (EncryptedStream stream = server.get(10000, TimeUnit.MILLISECONDS)) {
-            notifyCallback("Getting group key", callback);
+            notifyCallback(IJoinGroupStatusCallback.GETTING_KEY, null, callback);
             String key = stream.readLine();
-            notifyCallback("Received group key: " + key, callback);
+            notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, key, callback);
             addGroup(request.getGroupName(), key);
         } catch (ExecutionException e) {
             e.printStackTrace();
         } catch (TimeoutException e) {
+            //TODO retry?
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -830,9 +832,9 @@ public class HyperZMQ implements AutoCloseable {
      * @param message
      * @param callback
      */
-    private void notifyCallback(String message, @Nullable IJoinGroupStatusCallback callback) {
+    private void notifyCallback(int code, @Nullable String message, @Nullable IJoinGroupStatusCallback callback) {
         if (callback != null)
-            callback.joinGroupStatusCallback(message);
+            callback.joinGroupStatusCallback(code, message);
     }
 
     // TODO add callback
@@ -842,6 +844,11 @@ public class HyperZMQ implements AutoCloseable {
             return;
         }
         print("Received JoinGroupRequest: " + request.toString());
+        // Check if we are responsible for the request
+        if (!request.getContactPublicKey().equals(getSawtoothPublicKey())) {
+            print("This client is not responsible for the request");
+            return;
+        }
 
         // TODO voting here
 

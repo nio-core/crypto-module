@@ -152,7 +152,7 @@ class EventHandler implements AutoCloseable {
     }
 
     private void print(String msg) {
-        System.out.println("[EventHandler " + hyperzmq.getClientID() + "] " + msg);
+        System.out.println("[" + Thread.currentThread().getId() + "]" + "[EventHandler " + hyperzmq.getClientID() + "] " + msg);
     }
 
     public void setValidatorURL(String validatorURL) {

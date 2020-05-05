@@ -44,6 +44,7 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
         this.address = address;
         this.port = port;
         this.isServer = isServer;
+        print("TheirPub " + theirPublicKey);
     }
 
     // TODO: improve error handling
@@ -98,6 +99,8 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
         byte[] bytes = publicKey.getEncoded();
         String strPublicKey = Base64.getEncoder().encodeToString(bytes);
         DHMessage message = new DHMessage(strPublicKey, myID);
+        print("Signing " + message.getSignablePayload());
+        print("Using public key: " + signer.getPublicKey().hex());
         message.setSignature(signer.sign(message.getSignablePayload().getBytes(StandardCharsets.UTF_8)));
         return message;
     }
@@ -163,6 +166,6 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
 
     private void print(String message) {
         if (doPrint)
-            System.out.println("[DHKE-" + myID + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "]" + "[DHKE-" + myID + "] " + message);
     }
 }

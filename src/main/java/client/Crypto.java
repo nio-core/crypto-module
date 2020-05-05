@@ -34,7 +34,7 @@ public class Crypto {
     private Secp256k1Context context;
     private PrivateKey privateKey;
     private Signer signer;
-    private Storage storage;
+    private final Storage storage;
 
     /**
      * Create a instance which loads the KeyStore and DataFile from the given path (which should include <filename>.jks. and <filename>.dat)
@@ -111,7 +111,7 @@ public class Crypto {
      *
      * @param plainText
      * @param key       AES-GCM 256bit key
-     * @return ciphertext IN BASE64 ENCODING
+     * @return cipher text IN BASE64 ENCODING
      * @throws GeneralSecurityException
      */
     public static String encrypt(String plainText, SecretKey key) throws GeneralSecurityException {
@@ -208,7 +208,7 @@ public class Crypto {
 
         groupKeys = data.keys;
         context = new Secp256k1Context();
-        PrivateKey key = new Secp256k1PrivateKey(Utils.HEX.decode(data.getSigningKeyHex()));
+        PrivateKey key = new Secp256k1PrivateKey(SawtoothUtils.hexDecode(data.getSigningKeyHex()));
         signer = new Signer(context, key);
         data.data.remove(SAWTOOTHER_SIGNER_KEY);
         // restore the curve keys, the data map does not contain the data encryption key anymore
@@ -226,6 +226,10 @@ public class Crypto {
 
     Signer getSigner() {
         return signer;
+    }
+
+    PrivateKey getPrivateKey() {
+        return privateKey;
     }
 
     public void addKeypair(Keypair kp) {

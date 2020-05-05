@@ -117,15 +117,10 @@ public class KeyExReceiptHandler implements TransactionHandler {
 
         // Update the entry that has the keys which are in the given group
         if (receipt.getReceiptType() == ReceiptType.JOIN_GROUP) {
-            print("Receipt is of JOIN_GROUP, updating group entry...");
+            print("Receipt is of JOIN_GROUP type, updating group entry...");
             String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, receipt.getGroup());
             print("Group address: " + groupAddress);
-            // Get entries form address
-            Map<String, ByteString> entries = state.getState(
-                    Collections.singletonList(groupAddress));
-
-            ByteString bsEntry = entries.get(groupAddress);
-            List<String> lEntries = new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
+            List<String> lEntries = readKeysFromAddress(groupAddress, state);
             print("Entries at address before update: " + lEntries.toString());
             print("Adding " + receipt.getApplicantPublicKey());
             lEntries.add(receipt.getApplicantPublicKey());
@@ -139,7 +134,19 @@ public class KeyExReceiptHandler implements TransactionHandler {
             if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
                 throw new InvalidTransactionException("Unable to update group member entry");
             }
+
+            print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
         }
     }
+
+    private ArrayList<String> readKeysFromAddress(String address, Context state) throws InternalError, InvalidTransactionException {
+        // Get entries form address
+        Map<String, ByteString> entries = state.getState(
+                Collections.singletonList(address));
+
+        ByteString bsEntry = entries.get(address);
+        return new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
+    }
 }
+
 
