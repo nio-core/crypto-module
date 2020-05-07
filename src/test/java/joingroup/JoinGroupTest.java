@@ -27,10 +27,10 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         member2.addGroup(groupName, member1.getKeyForGroup(groupName));
 
         // Prepare Voting behavior - member2 should be responsible for the voting
-        member1.setVotingStrategyGroup(new YesVoteStrategy(300));
-        member2.setVotingStrategyGroup(new YesVoteStrategy(300));
+        member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         GroupInternVotingProcess votingProcess = new GroupInternVotingProcess(member2, 50);
-        member2.setVotingProcessGroup(votingProcess);
+        member2.getVoteManager().setVotingProcessGroup(votingProcess);
 
 
         // Start the join process

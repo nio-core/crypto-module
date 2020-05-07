@@ -45,20 +45,11 @@ public class HyperZMQ implements AutoCloseable {
     private final BlockchainHelper blockchainHelper;
     private final ZContext zContext = new ZContext();
 
+    private final VoteManager voteManager;
+
     // Outlet for messages of Vote type received in groups
     private IGroupVoteReceiver groupVoteReceiver = null;
 
-    // Variables for selecting a subgroup of participants when voting
-    private ISubgroupSelector subgroupSelector = null;
-    private int votingParticipantsThreshold = 5;
-
-    // The VotingProcess implements the behavior for when this client is the vote leader
-    private IVotingProcess votingProcessGroup = null;
-    private IVotingProcess votingProcessNetwork = null;
-
-    // The VotingStrategies implement the behavior for when a vote if required from this client
-    private IVotingStrategy votingStrategyNetwork = null;
-    private IVotingStrategy votingStrategyGroup = null;
 
     // if this is set, passes all contract messages received in a group to all callbacks that are registered
     // also invokes the group callback with ContractReceipt additionally to the ReceiptCallback
@@ -74,21 +65,23 @@ public class HyperZMQ implements AutoCloseable {
      *                         and encryption key will be created
      */
     public HyperZMQ(String id, String pathToKeyStore, String keystorePassword, String dataFilePath, boolean createNewStore) {
-        clientID = id;
+        this.clientID = id;
         //_crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), createNewStore);
-        crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
-        eventHandler = new EventHandler(this);
-        blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
+        this.eventHandler = new EventHandler(this);
+        this.blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.voteManager = new VoteManager(this);
     }
 
     /**
      * Using the default keystore file path
      */
     public HyperZMQ(String id, String keystorePassword, boolean createNewStore) {
-        clientID = id;
-        crypto = new Crypto(this, keystorePassword.toCharArray(), createNewStore);
-        eventHandler = new EventHandler(this);
-        blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.clientID = id;
+        this.crypto = new Crypto(this, keystorePassword.toCharArray(), createNewStore);
+        this.eventHandler = new EventHandler(this);
+        this.blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.voteManager = new VoteManager(this);
     }
 
     /**
@@ -693,7 +686,7 @@ public class HyperZMQ implements AutoCloseable {
         return msgBuilder.toString().getBytes(UTF_8);
     }
 
-    protected void print(String message) {
+    void print(String message) {
         System.out.println("[" + Thread.currentThread().getId() + "]" + "[" + clientID + "]  " + message);
     }
 
@@ -749,14 +742,6 @@ public class HyperZMQ implements AutoCloseable {
 
     public String getClientID() {
         return clientID;
-    }
-
-    public void setVotingProcessGroup(@Nullable IVotingProcess votingProcessGroup) {
-        this.votingProcessGroup = votingProcessGroup;
-    }
-
-    public void setVotingProcessNetwork(@Nullable IVotingProcess votingProcessNetwork) {
-        this.votingProcessNetwork = votingProcessNetwork;
     }
 
     // Debug function: changes sawtooth identity to the given key
@@ -900,83 +885,15 @@ public class HyperZMQ implements AutoCloseable {
         } catch (JsonSyntaxException e) {
             throw new IllegalArgumentException(e);
         }
-
-        if (matter.getDesiredVoters().contains(getSawtoothPublicKey())) {
-            IVotingStrategy strategy = null;
-            // TODO switch new voting stragies here
-            switch (matter.getType()) {
-                case JOIN_GROUP: {
-                    strategy = votingStrategyGroup;
-                    break;
-                }
-                case JOIN_NETWORK: {
-                    strategy = votingStrategyNetwork;
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            if (strategy == null) {
-                // TODO possibly add a fallback strategy or vote no by default?
-                print("No strategy found to vote on the matter: " + matter.toString());
-                return;
-            }
-
-            Vote vote = strategy.castVote(matter, getSawtoothSigner());
-
-            // Send the vote back in the group
-            Envelope env = new Envelope(this.clientID, MESSAGETYPE_VOTE, vote.toString());
-
-            Transaction t;
-            try {
-                t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
-                        "0.1",
-                        Base64.getDecoder().decode(crypto.encrypt(vote.toString(), matter.getGroup())),
-                        null);
-            } catch (GeneralSecurityException e) {
-                e.printStackTrace();
-                return;
-            }
-
-            blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+/*
         } else {
             print("Received VotingMatter but this clients vote is not required.");
             return;
-        }
+        } */
     }
 
-    public IVotingProcess getVotingProcessGroup() {
-        return votingProcessGroup;
-    }
-
-    public IVotingProcess getVotingProcessNetwork() {
-        return votingProcessNetwork;
-    }
-
-    public IVotingStrategy getVotingStrategyNetwork() {
-        return votingStrategyNetwork;
-    }
-
-    public IVotingStrategy getVotingStrategyGroup() {
-        return votingStrategyGroup;
-    }
-
-    public void setVotingStrategyGroup(IVotingStrategy votingStrategyGroup) {
-        this.votingStrategyGroup = votingStrategyGroup;
-    }
-
-    public void setVotingStrategyNetwork(IVotingStrategy votingStrategyNetwork) {
-        this.votingStrategyNetwork = votingStrategyNetwork;
-    }
-
-    public int getVotingParticipantsThreshold() {
-        return votingParticipantsThreshold;
-    }
-
-    public void setSubgroupSelector(ISubgroupSelector selector, int votingParticipantsThreshold) {
-        this.subgroupSelector = selector;
-        this.votingParticipantsThreshold = votingParticipantsThreshold;
+    public VoteManager getVoteManager() {
+        return voteManager;
     }
 
     public void setGroupVoteReceiver(IGroupVoteReceiver groupVoteReceiver) {

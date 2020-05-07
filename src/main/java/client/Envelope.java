@@ -5,6 +5,9 @@ import com.google.gson.Gson;
 import javax.annotation.Nonnull;
 import java.util.UUID;
 
+/**
+ *
+ */
 public class Envelope {
     private final String sender;
     private final String type;

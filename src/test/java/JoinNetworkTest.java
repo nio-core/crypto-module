@@ -1,5 +1,4 @@
 import client.HyperZMQ;
-import client.HyperZMQStub;
 import client.JNManager;
 import org.junit.Test;
 
