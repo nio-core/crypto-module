@@ -59,7 +59,7 @@ class EventHandler implements AutoCloseable {
                                     EventList list = EventList.parseFrom(messageReceived.getContent());
                                     for (Event e : list.getEventsList()) {
                                         String received = e.toString();
-                                        //print("Received Event: " + received);
+                                        print("Received Event: " + received);
 
                                         // Check whether the event is a new encrypted message or a join request
                                         Event.Attribute attr = e.getAttributes(0);
@@ -111,6 +111,7 @@ class EventHandler implements AutoCloseable {
                 }
             }
             // End while
+            print("Exiting...");
             socket.close();
         });
         t.start();

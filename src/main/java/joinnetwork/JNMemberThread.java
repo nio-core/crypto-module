@@ -1,8 +1,8 @@
 package joinnetwork;
 
 import client.JNManager;
-import message.JNChallengeMessage;
-import message.JNResponseMessage;
+import messages.JNChallengeMessage;
+import messages.JNResponseMessage;
 import sawtooth.sdk.signing.Signer;
 import util.Utilities;
 

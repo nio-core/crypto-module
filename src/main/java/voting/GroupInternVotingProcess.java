@@ -26,6 +26,7 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
 
         // Prepare the result
         result = new VotingResult(votingMatter, new ArrayList<>());
+
         boolean run = true;
         while (run) {
             try {

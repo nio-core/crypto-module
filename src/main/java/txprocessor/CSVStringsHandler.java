@@ -43,6 +43,7 @@ public class CSVStringsHandler implements TransactionHandler {
         return namespaces;
     }
 // TODO change payload layout to have message type visible since some message types do not need to be written to the state
+
     /**
      * A TRANSACTION CAN BE SENT TO THE TRANSACTION PROCESSOR MULTIPLE TIMES.
      * IT IS IMPORTANT THAT THE APPLY METHOD IS IDEMPOTENT!!!!
@@ -62,6 +63,7 @@ public class CSVStringsHandler implements TransactionHandler {
 
         String payloadStr = tpProcessRequest.getPayload().toString(UTF_8);
         print("Got payload: " + payloadStr);
+        print("From: " + tpProcessRequest.getHeader().getSignerPublicKey());
 
         TransactionHeader header = tpProcessRequest.getHeader();
 

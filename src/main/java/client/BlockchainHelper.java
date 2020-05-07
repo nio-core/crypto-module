@@ -167,7 +167,7 @@ public class BlockchainHelper {
             //System.out.println("ClientBatchSubmitResponse parsed: " + cbsResp);
             // Check submission status
             boolean success = cbsResp.getStatus() == ClientBatchSubmitResponse.Status.OK;
-            System.out.println("Batch submit was " + (success ? "successful" : "not successful"));
+            hyperZMQ.print("Batch submit was " + (success ? "successful" : "not successful"));
             return success;
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();

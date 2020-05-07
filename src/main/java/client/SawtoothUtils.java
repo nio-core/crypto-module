@@ -25,7 +25,7 @@ public class SawtoothUtils {
 
     //private static final String HEX_CHARACTERS = "0123456789ABCDEF";
     private static final String HEX_CHARACTERS = "0123456789abcdef";
-    private static boolean doPrint = true;
+    private static boolean doPrint = false;
 
     public static String hash(String toHash) {
         return Utils.hash512(toHash.getBytes(StandardCharsets.UTF_8));
@@ -78,9 +78,10 @@ public class SawtoothUtils {
     }
 
     public static boolean verify(String message, String signature, String publicKey) {
-        print("verifying " + message + " with signature=" + signature + ", pub=" + publicKey);
+        print("verifying " + message);
+        print("with signature: " + signature);
         PublicKey publicKey1 = new Secp256k1PublicKey(hexDecode(publicKey));
-        print("Publickey: " + publicKey1.hex());
+        print("Public key: " + publicKey1.hex());
         return verify(message, signature, publicKey1);
     }
 
@@ -99,7 +100,7 @@ public class SawtoothUtils {
             return new Gson().fromJson(message, classOfT);
         } catch (JsonSyntaxException e) {
             //e.printStackTrace();
-            System.out.println("Cannot deserialize message: " + message + " to " + classOfT.toString());
+            System.err.println("Cannot deserialize message: " + message + " to " + classOfT.toString());
             return null;
         }
     }

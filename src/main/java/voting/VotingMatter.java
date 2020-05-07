@@ -8,7 +8,6 @@ import java.util.List;
 
 public class VotingMatter {
 
-    private final String applicantID;
     private final String applicantPublicKey;
     private final String voteDirectorPublicKey;
     // The hash is used to refer to this voting matter. When casting a voting, the participant signs its vote as well
@@ -19,20 +18,16 @@ public class VotingMatter {
     private final List<String> desiredVoters;
 
 
-    public VotingMatter(String applicantID, String applicantPublicKey, String voteDirectorPublicKey, VotingMatterType type, @Nullable String group, List<String> desiredVoters) {
-        this.applicantID = applicantID;
+    public VotingMatter(String applicantPublicKey, String voteDirectorPublicKey, VotingMatterType type, @Nullable String group, List<String> desiredVoters) {
         this.applicantPublicKey = applicantPublicKey;
         this.voteDirectorPublicKey = voteDirectorPublicKey;
         this.type = type;
         this.desiredVoters = desiredVoters;
         this.group = this.type == VotingMatterType.JOIN_GROUP ? (group != null ? group : "") : "";
-        this.hash = SawtoothUtils.hash(this.applicantID + this.applicantPublicKey + this.voteDirectorPublicKey
+        this.hash = SawtoothUtils.hash(this.applicantPublicKey + this.voteDirectorPublicKey
                 + this.type + this.getDesiredVoters().toString());
     }
 
-    public String getApplicantID() {
-        return applicantID;
-    }
 
     public String getApplicantPublicKey() {
         return applicantPublicKey;

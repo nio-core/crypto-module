@@ -1,4 +1,4 @@
-package message;
+package messages;
 
 import com.google.gson.Gson;
 import txprocessor.ISignablePayload;
