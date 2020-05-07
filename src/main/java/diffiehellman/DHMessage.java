@@ -1,21 +1,17 @@
 package diffiehellman;
 
 import com.google.gson.Gson;
-import txprocessor.ISignablePayload;
+import keyexchange.ISignableMessage;
 
-public class DHMessage implements ISignablePayload {
+public class DHMessage implements ISignableMessage {
 
-    private String publicKey; // DH PublicKey in Base64
-    private String senderID;
+    private final String publicKey; // DH PublicKey in Base64
+    private final String senderID;
     private String signature;
 
     public DHMessage(String publicKey, String senderID) {
         this.publicKey = publicKey;
         this.senderID = senderID;
-    }
-
-    public void setSignature(String signature) {
-        this.signature = signature;
     }
 
     public String getPublicKey() {
@@ -26,6 +22,12 @@ public class DHMessage implements ISignablePayload {
         return senderID;
     }
 
+    @Override
+    public void setSignature(String signature) {
+        this.signature = signature;
+    }
+
+    @Override
     public String getSignature() {
         return signature;
     }

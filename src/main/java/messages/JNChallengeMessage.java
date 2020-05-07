@@ -1,13 +1,14 @@
 package messages;
 
 import com.google.gson.Gson;
+import keyexchange.ISignableMessage;
 
-public class JNChallengeMessage implements txprocessor.ISignablePayload {
+public class JNChallengeMessage implements ISignableMessage {
 
-    private String memberPublicKey;
-    private String nonce;
+    private final String memberPublicKey;
+    private final String nonce;
     private String signature;
-    private String memberID;
+    private final String memberID;
 
     public JNChallengeMessage(String memberPublicKey, String nonce, String memberID) {
         this.memberPublicKey = memberPublicKey;
@@ -19,10 +20,6 @@ public class JNChallengeMessage implements txprocessor.ISignablePayload {
         return memberID;
     }
 
-    public void setSignature(String signature) {
-        this.signature = signature;
-    }
-
     public String getMemberPublicKey() {
         return memberPublicKey;
     }
@@ -31,6 +28,7 @@ public class JNChallengeMessage implements txprocessor.ISignablePayload {
         return nonce;
     }
 
+    @Override
     public String getSignature() {
         return signature;
     }
@@ -38,6 +36,11 @@ public class JNChallengeMessage implements txprocessor.ISignablePayload {
     @Override
     public String getSignablePayload() {
         return memberID + "|" + nonce;
+    }
+
+    @Override
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     @Override

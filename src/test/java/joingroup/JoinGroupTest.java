@@ -40,11 +40,11 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 
         // Prepare Voting behavior - member2 should be responsible for the voting
-        member1.setVotingStrategyGroup(new YesVoteStrategy(300));
-        member2.setVotingStrategyGroup(new YesVoteStrategy(300));
 
-        member1.setVotingProcessGroup(new GroupInternVotingProcess(member1, 50));
-        member2.setVotingProcessGroup(new GroupInternVotingProcess(member2, 50));
+        member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        GroupInternVotingProcess votingProcess = new GroupInternVotingProcess(member2, 50);
+        member2.getVoteManager().setVotingProcessGroup(votingProcess);
 
         // Start the join process
         HyperZMQ applicant = new HyperZMQ("applicant", "password", true);

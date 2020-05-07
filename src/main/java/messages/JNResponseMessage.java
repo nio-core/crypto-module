@@ -1,22 +1,22 @@
 package messages;
 
 import com.google.gson.Gson;
-import txprocessor.ISignablePayload;
+import keyexchange.ISignableMessage;
 
-public class JNResponseMessage implements ISignablePayload {
+public class JNResponseMessage implements ISignableMessage {
 
-    private String nonce;
+    private final String nonce;
     private String signature;
 
-    public JNResponseMessage(String nonce, String signature) {
+    public JNResponseMessage(String nonce) {
         this.nonce = nonce;
-        this.signature = signature;
     }
 
     public String getNonce() {
         return nonce;
     }
 
+    @Override
     public String getSignature() {
         return signature;
     }
@@ -24,6 +24,11 @@ public class JNResponseMessage implements ISignablePayload {
     @Override
     public String getSignablePayload() {
         return nonce;
+    }
+
+    @Override
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     @Override

@@ -1,23 +1,20 @@
 package keyexchange;
 
 import com.google.gson.Gson;
-import txprocessor.ISignablePayload;
 
 import javax.annotation.Nullable;
 
-public class KeyExchangeReceipt implements ISignablePayload {
+public class KeyExchangeReceipt implements ISignableMessage {
 
-    private String memberPublicKey;
-    private String applicantPublicKey;
-    private ReceiptType receiptType;
+    private final String memberPublicKey;
+    private final String applicantPublicKey;
+    private final ReceiptType receiptType;
     private String group; // is null if ReceiptType is JOIN_NETWORK
-    private long timestamp;
+    private final long timestamp;
     private String signature;
 
-    // TODO add builder for signature
-    // TODO add group members to payload to have member list can be encrypted (created by client instead of TP)
-
-    public KeyExchangeReceipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType, @Nullable String group, long timestamp) {
+    public KeyExchangeReceipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType,
+                              @Nullable String group, long timestamp) {
         this.memberPublicKey = memberPublicKey;
         this.applicantPublicKey = applicantPublicKey;
         this.receiptType = receiptType;
@@ -25,14 +22,6 @@ public class KeyExchangeReceipt implements ISignablePayload {
         if (receiptType == ReceiptType.JOIN_NETWORK)
             this.group = null;
         this.timestamp = timestamp;
-    }
-
-    public String getSignature() {
-        return signature;
-    }
-
-    public void setSignature(String signature) {
-        this.signature = signature;
     }
 
     public String getMemberPublicKey() {
@@ -53,6 +42,16 @@ public class KeyExchangeReceipt implements ISignablePayload {
 
     public long getTimestamp() {
         return timestamp;
+    }
+
+    @Override
+    public String getSignature() {
+        return signature;
+    }
+
+    @Override
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     @Override

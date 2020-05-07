@@ -92,6 +92,6 @@ public class JNManager implements IJNMember, IAsyncSubSocketCallback {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[JNManager][" + clientID + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [JNManager][" + clientID + "] " + message);
     }
 }

@@ -1,23 +1,22 @@
 package voting;
 
 import com.google.gson.Gson;
+import keyexchange.ISignableMessage;
 import sawtooth.sdk.signing.Signer;
-import txprocessor.ISignablePayload;
 
 import java.nio.charset.StandardCharsets;
 
-public class Vote implements ISignablePayload {
+public class Vote implements ISignableMessage {
 
     private final String votingMatterHash;
     private final String publicKey;
-    private final String signature;
+    private String signature;
     private final boolean approval;
 
-    public Vote(boolean approval, String votingMatterHash, String publicKey, Signer signer) {
+    public Vote(boolean approval, String votingMatterHash, String publicKey) {
         this.votingMatterHash = votingMatterHash;
         this.publicKey = publicKey;
         this.approval = approval;
-        this.signature = signer.sign(getSignablePayload().getBytes(StandardCharsets.UTF_8));
     }
 
     public String getVotingMatterHash() {
@@ -28,17 +27,23 @@ public class Vote implements ISignablePayload {
         return publicKey;
     }
 
-    public String getSignature() {
-        return signature;
-    }
-
     public boolean isApproval() {
         return approval;
     }
 
     @Override
+    public String getSignature() {
+        return signature;
+    }
+
+    @Override
     public String getSignablePayload() {
         return votingMatterHash + "|" + publicKey + "|" + approval;
+    }
+
+    @Override
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     @Override

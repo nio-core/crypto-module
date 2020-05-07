@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 
 public class JNRequestMessage {
 
-    private String applicantID;
-    private String applicantPublicKey;
+    private final String applicantID;
+    private final String applicantPublicKey;
 
     public JNRequestMessage(String applicantID, String applicantPublicKey) {
         this.applicantID = applicantID;

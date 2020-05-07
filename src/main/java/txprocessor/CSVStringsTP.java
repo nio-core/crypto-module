@@ -1,12 +1,13 @@
 package txprocessor;
 
 
+import client.ValidatorAddress;
 import sawtooth.sdk.processor.TransactionProcessor;
 
 public class CSVStringsTP {
 
     public static void main(String[] args) {
-        String url = "tcp://127.0.0.1:4004";
+        String url = ValidatorAddress.VALIDATOR_URL_DEFAULT;
         if (args != null && args.length > 0) {
             url = args[0];
         }
