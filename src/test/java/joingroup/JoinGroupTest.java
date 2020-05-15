@@ -6,7 +6,7 @@ import keyexchange.ReceiptType;
 import org.junit.Test;
 import voting.GroupInternVotingProcess;
 import voting.VotingMatter;
-import voting.VotingMatterType;
+import voting.JoinRequestType;
 import voting.YesVoteStrategy;
 
 import java.util.Arrays;
@@ -48,7 +48,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
 
         // Start the join process
         HyperZMQ applicant = new HyperZMQ("applicant", "password", true);
-        applicant.tryJoinGroup(groupName, this);
+        applicant.tryJoinGroup(groupName, "localhost", 5555, null, this);
 
         Thread.sleep(15000);
         if (receivedKey == null)
@@ -66,11 +66,17 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         HyperZMQ member2 = new HyperZMQ("member2", "password", true);
         member2.addGroup(groupName, member1.getKeyForGroup(groupName));
 
-        VotingMatter votingMatter = new VotingMatter("applicant public key",
+        JoinRequest joinRequest = new JoinRequest("AAAAAAAAAAAAA",
                 member1.getSawtoothPublicKey(),
-                VotingMatterType.JOIN_GROUP,
+                JoinRequestType.GROUP,
                 groupName,
-                Arrays.asList(member1.getSawtoothPublicKey(), member2.getSawtoothPublicKey()));
+                null,
+                "localhost",
+                5555);
+
+        VotingMatter votingMatter = new VotingMatter(member1.getSawtoothPublicKey(),
+                Arrays.asList(member1.getSawtoothPublicKey(), member2.getSawtoothPublicKey()),
+                joinRequest);
 
         member1.sendVotingMatterInGroup(votingMatter);
 

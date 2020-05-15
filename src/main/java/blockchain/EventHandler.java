@@ -1,5 +1,6 @@
-package client;
+package blockchain;
 
+import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -9,7 +10,7 @@ import sawtooth.sdk.protobuf.Message.MessageType;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-class EventHandler implements AutoCloseable {
+public class EventHandler implements AutoCloseable {
     private final HyperZMQ hyperzmq;
     static final String CORRELATION_ID = "123";
 
@@ -20,7 +21,7 @@ class EventHandler implements AutoCloseable {
     private int receiveTimeoutMS = 300;
     private final ZContext context;
 
-    EventHandler(HyperZMQ callback) {
+    public EventHandler(HyperZMQ callback) {
         this.hyperzmq = callback;
         context = new ZContext();
         this.socket = context.createSocket(ZMQ.DEALER);

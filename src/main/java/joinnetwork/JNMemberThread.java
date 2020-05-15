@@ -1,6 +1,6 @@
 package joinnetwork;
 
-import client.JNManager;
+import client.JoiningManager;
 import messages.JNChallengeMessage;
 import messages.JNResponseMessage;
 import sawtooth.sdk.signing.Signer;
@@ -49,7 +49,7 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
         this.mySigner = mySigner;
         this.myPublicKeyHex = myPublicKeyHex;
         this.callback = callback;
-        this.topic_prefix = applID + JNManager.JOIN_SAWTOOTH_NETWORK_TOPIC;
+        this.topic_prefix = applID + JoiningManager.JOIN_SAWTOOTH_NETWORK_TOPIC;
     }
 
     @Override

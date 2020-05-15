@@ -1,5 +1,7 @@
 package voting;
 
+import com.google.gson.Gson;
+
 import java.util.List;
 
 /**
@@ -23,7 +25,6 @@ public class VotingResult {
             System.out.println("adding vote");
             votes.add(vote);
         }
-
     }
 
     public int getVotesSize() {
@@ -36,5 +37,10 @@ public class VotingResult {
 
     public List<Vote> getVotes() {
         return votes;
+    }
+
+    @Override
+    public String toString() {
+        return new Gson().toJson(this);
     }
 }

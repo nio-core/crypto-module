@@ -1,4 +1,4 @@
-package messages;
+package unused;
 
 public enum MessageType {
 

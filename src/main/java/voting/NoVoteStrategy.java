@@ -2,9 +2,11 @@ package voting;
 
 import sawtooth.sdk.signing.Signer;
 
+import java.nio.charset.StandardCharsets;
+
 public class NoVoteStrategy implements IVotingStrategy {
 
-    private int sleepMS;
+    private final int sleepMS;
 
     public NoVoteStrategy(int delayMS) {
         this.sleepMS = delayMS;
@@ -17,6 +19,8 @@ public class NoVoteStrategy implements IVotingStrategy {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return new Vote(false, votingMatter.getHash(), signer.getPublicKey().hex(), signer);
+        Vote v = new Vote(false, votingMatter.getHash(), signer.getPublicKey().hex());
+        v.setSignature(signer.sign(v.getSignablePayload().getBytes(StandardCharsets.UTF_8)));
+        return v;
     }
 }

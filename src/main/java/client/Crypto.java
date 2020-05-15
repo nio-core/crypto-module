@@ -1,8 +1,8 @@
 package client;
 
+import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import org.bitcoinj.core.Utils;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PrivateKey;
@@ -14,9 +14,15 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static client.Storage.*;
+import static client.Storage.DATA_ENCRYPTION_KEY_ALIAS;
+import static client.Storage.DEFAULT_KEYSTORE_PATH;
+import static client.Storage.SAWTOOTHER_SIGNER_KEY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Crypto {

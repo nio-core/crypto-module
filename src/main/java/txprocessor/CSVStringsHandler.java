@@ -1,13 +1,12 @@
 package txprocessor;
 
-import client.SawtoothUtils;
+import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
-import joingroup.JoinGroupRequest;
+import joingroup.JoinRequest;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
-import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
@@ -76,7 +75,7 @@ public class CSVStringsHandler implements TransactionHandler {
 
         // Check if the payload is a JoinRequest
         try {
-            JoinGroupRequest request = new Gson().fromJson(payloadStr, JoinGroupRequest.class);
+            JoinRequest request = new Gson().fromJson(payloadStr, JoinRequest.class);
             //handleJoinRequest(tpProcessRequest, context, request);
             print("handling JoinRequest...");
 
@@ -155,7 +154,7 @@ public class CSVStringsHandler implements TransactionHandler {
         }
     }
 
-    private void handleJoinRequest(TpProcessRequest tpProcessRequest, Context context, JoinGroupRequest request) {
+    private void handleJoinRequest(TpProcessRequest tpProcessRequest, Context context, JoinRequest request) {
 
     }
 

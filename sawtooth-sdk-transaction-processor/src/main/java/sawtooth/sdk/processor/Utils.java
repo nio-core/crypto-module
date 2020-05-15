@@ -14,7 +14,7 @@
 
 package sawtooth.sdk.processor;
 
-import client.SawtoothUtils;
+import blockchain.SawtoothUtils;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;

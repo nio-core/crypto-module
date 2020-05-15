@@ -11,7 +11,7 @@ import util.Utilities;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class JNManager implements IJNMember, IAsyncSubSocketCallback {
+public class JoiningManager implements IJNMember, IAsyncSubSocketCallback {
 
     private final String clientID;
     private final HyperZMQ hyperZMQ;
@@ -27,7 +27,7 @@ public class JNManager implements IJNMember, IAsyncSubSocketCallback {
     public static final String JOIN_SAWTOOTH_NETWORK_TOPIC = "JOIN_NETWORK";
     private boolean doPrint = true;
 
-    public JNManager(HyperZMQ hyperZMQ, String joinNetworkAddress) {
+    public JoiningManager(HyperZMQ hyperZMQ, String joinNetworkAddress) {
         this.clientID = hyperZMQ.getClientID();
         this.hyperZMQ = hyperZMQ;
         this.joinNetworkAddress = joinNetworkAddress;
@@ -92,6 +92,6 @@ public class JNManager implements IJNMember, IAsyncSubSocketCallback {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[" + Thread.currentThread().getId() + "] [JNManager][" + clientID + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [JoiningManager][" + clientID + "] " + message);
     }
 }

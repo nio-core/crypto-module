@@ -1,16 +1,16 @@
-package message;
+package messages;
 
-import client.HyperZMQ;
 import diffiehellman.DHMessage;
-import joingroup.JoinGroupRequest;
+import joingroup.JoinRequest;
 import keyexchange.ISignableMessage;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.signing.Signer;
+import voting.JoinRequestType;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Map;
 
 /**
  * This is not a real factory as of the GoF pattern, instead this class is used to centralize the creation of
@@ -21,7 +21,7 @@ public class MessageFactory {
 
     private final Signer signer;
 
-    public MessageFactory(Signer signer, HyperZMQ hyperZMQ) {
+    public MessageFactory(Signer signer) {
         this.signer = signer;
     }
 
@@ -41,8 +41,9 @@ public class MessageFactory {
         return signIfPossible(new DHMessage(publicKey, senderID));
     }
 
-    public JoinGroupRequest joinGroupRequest(String applicantPublicKey, String contactPublicKey, String groupName, List<String> votingArgs, String address, int port) {
-        return signIfPossible(new JoinGroupRequest(applicantPublicKey, contactPublicKey, groupName, votingArgs, address, port));
+    public JoinRequest joinGroupRequest(String applicantPublicKey, String contactPublicKey, JoinRequestType type,
+                                        String groupName, Map<String, String> votingArgs, String address, int port) {
+        return signIfPossible(new JoinRequest(applicantPublicKey, contactPublicKey, type, groupName, votingArgs, address, port));
     }
 
     public KeyExchangeReceipt keyExchangeReceipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType,

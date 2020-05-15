@@ -1,7 +1,7 @@
 package txprocessor;
 
 
-import client.ValidatorAddress;
+import blockchain.ValidatorAddress;
 import sawtooth.sdk.processor.TransactionProcessor;
 
 public class CSVStringsTP {
