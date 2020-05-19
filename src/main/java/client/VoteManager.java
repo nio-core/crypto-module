@@ -4,6 +4,7 @@ import blockchain.BlockchainHelper;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
 import groups.Envelope;
+import java.net.ConnectException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -157,7 +158,7 @@ public class VoteManager {
                     }
 
                     VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, joinRequest);
-
+                    // TODO add timeout to process - if reached reject the request?
                     VotingResult result = process.vote(votingMatter);
                     print("VoteProcess finished with result: " + result.toString());
                     boolean isApproved = voteEvaluator.evaluateVotes(result);
@@ -201,6 +202,11 @@ public class VoteManager {
                 EncryptedStream encryptedStream = null;
                 try {
                     encryptedStream = exchange.call();
+                } catch (ConnectException e) {
+                    // TODO applicant has not set up a server
+                    print("Cannot nofity the applicant because no server is listening for a connection on: "
+                            + joinRequest.getAddress() + ":" + joinRequest.getPort());
+                    //e.printStackTrace();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -214,7 +220,7 @@ public class VoteManager {
                     }
                 } else {
                     // TODO
-                    print("Diffie- Hellman key exchange failed!");
+                    print("Diffie-Hellman key exchange failed!");
                 }
             }
         }

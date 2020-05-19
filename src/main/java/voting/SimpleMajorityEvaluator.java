@@ -27,9 +27,10 @@ public class SimpleMajorityEvaluator implements IVoteEvaluator {
         } else {
             // Count the votes
             int yes = 0, no = 0;
+            List<String> desiredVoters = votingResult.getVotingMatter().getDesiredVoters();
             for (Vote v : votingResult.getVotes()) {
                 // Verify the vote to make it count
-                if (!allGroupMembers.contains(v.getPublicKey())) {
+                if (!desiredVoters.contains(v.getPublicKey())) {
                     print("VotingResult contained vote of unrequested entity: " + v.toString());
                     continue;
                 }

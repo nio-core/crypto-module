@@ -233,6 +233,7 @@ public class HyperZMQ implements AutoCloseable {
     /**
      * Query the given address of the global state.
      * DEPRECATED - USE ZMQ VARIANT INSTEAD
+     *
      * @param addr address to query (70 hex chars)
      * @return response or null if error
      */
@@ -872,10 +873,12 @@ public class HyperZMQ implements AutoCloseable {
         } catch (JsonSyntaxException e) {
             throw new IllegalArgumentException(e);
         }
-        /*} else {
-            print("Received VotingMatter but this clients vote is not required.");
-            return;
-        } */
+
+        if (matter.getDesiredVoters().contains(getSawtoothPublicKey())) {
+            voteManager.addVoteRequired(matter);
+        } else {
+            print("This client is not required to vote on the matter.");
+        }
     }
 
     public VoteManager getVoteManager() {

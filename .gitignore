@@ -28,3 +28,4 @@ keystore.jks
 data.dat
 *.iml
 target/
+*.jks

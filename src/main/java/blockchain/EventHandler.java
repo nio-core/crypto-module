@@ -86,7 +86,7 @@ public class EventHandler implements AutoCloseable {
                         // TODO distribute events here depending on type
                         for (Event e : list.getEventsList()) {
                             String received = e.toString();
-                            print("Received Event: " + received);
+                            //print("Received Event: " + received);
 
                             // Check whether the event is a new encrypted message or a join request
                             Event.Attribute attr = e.getAttributes(0);
@@ -146,6 +146,10 @@ public class EventHandler implements AutoCloseable {
                         } catch (InvalidProtocolBufferException e) {
                             e.printStackTrace();
                         }
+                        break;
+                    }
+                    case PING_REQUEST: {
+                        // IGNORE!!!
                         break;
                     }
                     default: {
@@ -211,7 +215,7 @@ public class EventHandler implements AutoCloseable {
     void queueNewSubscription(String eventName, EventFilter eventFilter) {
         // Build a subscription message ready to be sent which will be queued
         EventSubscription eventSubscription = EventSubscription.newBuilder()
-               // .addFilters(eventFilter)
+                // .addFilters(eventFilter)
                 .setEventType(eventName)
                 .build();
 
@@ -226,7 +230,7 @@ public class EventHandler implements AutoCloseable {
                 .build();
 
         try {
-            print("Queueing subscription: " + request.toString());
+            //print("Queueing subscription: " + request.toString());
             subscriptionQueue.put(message);
         } catch (InterruptedException e) {
             e.printStackTrace();
