@@ -10,6 +10,7 @@ public class JoinRequest {
     // Basic info required
     private final String applicantPublicKey;
     private final String contactPublicKey;
+
     // Group is empty String for JoinRequestType
     private final String groupName;
     private final JoinRequestType type;

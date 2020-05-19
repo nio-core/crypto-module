@@ -29,10 +29,6 @@ public class MessageFactory {
         return signIfPossible(new JNChallengeMessage(memberPublicKey, nonce, memberID));
     }
 
-    public JNRequestMessage jnRequestMessage(String applicantID, String applicantPublicKey) {
-        return signIfPossible(new JNRequestMessage(applicantID, applicantPublicKey));
-    }
-
     public JNResponseMessage jnResponseMessage(String nonce) {
         return signIfPossible(new JNResponseMessage(nonce));
     }

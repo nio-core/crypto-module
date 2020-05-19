@@ -18,6 +18,7 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
 
     @Override
     public VotingResult vote(VotingMatter votingMatter) {
+        System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING");
         // Register callback to evaluate the votes
         hyperZMQ.setGroupVoteReceiver(this);
 

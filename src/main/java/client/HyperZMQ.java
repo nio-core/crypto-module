@@ -94,14 +94,12 @@ public class HyperZMQ implements AutoCloseable {
         this.eventHandler = new EventHandler(this);
         this.blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
         this.voteManager = new VoteManager(this);
-
     }
 
     /**
      * Using the default keystore file path
      */
     public HyperZMQ(String id, String keystorePassword, boolean createNewStore) {
-
         this.clientID = id;
         this.crypto = new Crypto(this, keystorePassword.toCharArray(), createNewStore);
         this.eventHandler = new EventHandler(this);
@@ -228,13 +226,13 @@ public class HyperZMQ implements AutoCloseable {
         return crypto.removeKeypair(alias);
     }
 
-    public boolean groupIsAvailable(String groupName) {
+    public boolean isGroupAvailable(String groupName) {
         return crypto.hasKeyForGroup(groupName);
     }
 
     /**
      * Query the given address of the global state.
-     *
+     * DEPRECATED - USE ZMQ VARIANT INSTEAD
      * @param addr address to query (70 hex chars)
      * @return response or null if error
      */
@@ -547,7 +545,6 @@ public class HyperZMQ implements AutoCloseable {
             return;
         }
         Envelope envelope = new Gson().fromJson(plainMessage, Envelope.class);
-
         // TODO PROCESS NEW MESSAGE TYPES HERE
         switch (envelope.getType()) {
             case MESSAGETYPE_CONTRACT: {
@@ -571,9 +568,9 @@ public class HyperZMQ implements AutoCloseable {
             case MESSAGETYPE_VOTING_MATTER: {
                 handleVotingMatter(group, envelope);
                 // TODO maybe not do this?
-                if (passthroughAll) {
+                /*if (passthroughAll) {
                     handleTextMessage(group, envelope);
-                }
+                } */
                 break;
             }
             case MESSAGETYPE_VOTE: {
@@ -712,7 +709,7 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     void print(String message) {
-        System.out.println("[" + Thread.currentThread().getId() + "]" + "[" + clientID + "]  " + message);
+        System.out.println("[" + Thread.currentThread().getId() + "] [HyperZMQ]" + "[" + clientID + "]  " + message);
     }
 
     public void setValidatorURL(String url) {
@@ -790,11 +787,11 @@ public class HyperZMQ implements AutoCloseable {
             return;
         }
 
-        String contactPubkey = members.get(members.size() - 1); // Last one to join the group is responsible
-        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, contactPubkey, callback);
+        String contactPublickey = members.get(members.size() - 1); // Last one to join the group is responsible
+        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, contactPublickey, callback);
 
         JoinRequest request = new JoinRequest(getSawtoothPublicKey(),
-                contactPubkey,
+                contactPublickey,
                 JoinRequestType.GROUP,
                 groupName,
                 additionalInfo,
@@ -812,11 +809,11 @@ public class HyperZMQ implements AutoCloseable {
         // Now wait for the contact to perform key exchange
         // TODO
         FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
-                getSawtoothSigner(), contactPubkey, address, port, true));
+                getSawtoothSigner(), contactPublickey, address, port, true));
         notifyCallback(IJoinGroupStatusCallback.STARTING_DIFFIE_HELLMAN, null, callback);
         new Thread(server).start();
-
-        try (EncryptedStream stream = server.get(15000, TimeUnit.MILLISECONDS)) {
+        print("TryJoinGroup - Waiting for response");
+        try (EncryptedStream stream = server.get(25000, TimeUnit.MILLISECONDS)) {
             notifyCallback(IJoinGroupStatusCallback.GETTING_KEY, null, callback);
             String key = stream.readLine();
             notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, key, callback);
@@ -847,30 +844,12 @@ public class HyperZMQ implements AutoCloseable {
 
     // TODO add callback
     public void handleJoinGroupRequest(String serializedJoinRequest) {
-        JoinRequest request = SawtoothUtils.deserializeMessage(serializedJoinRequest, JoinRequest.class);
-        if (request == null) {
-            return;
-        }
-        print("Received JoinGroupRequest: " + request.toString());
 
-        // Check if we are responsible for the request
-        if (!request.getContactPublicKey().equals(getSawtoothPublicKey())) {
-            print("This client is not responsible for the request");
-            return;
-        }
-
-        // Check if we can access the requested key beforehand
-        Objects.requireNonNull(getKeyForGroup(request.getGroupName()), "Client does not have the key that was requested!");
-
-        // Convert to VotingMatter here already
-
-        // Pass control to VoteManager
-        //voteManager.runVoting(request);
     }
 
     public void sendVotingMatterInGroup(VotingMatter votingMatter) {
         Objects.requireNonNull(votingMatter);
-        if (!groupIsAvailable(votingMatter.getJoinRequest().getGroupName())) {
+        if (!isGroupAvailable(votingMatter.getJoinRequest().getGroupName())) {
             throw new IllegalArgumentException("The group specified in the VotingMatter is not available on this client!");
         }
 
@@ -886,6 +865,7 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     private void handleVotingMatter(String group, Envelope envelope) {
+        print("HandleVotingMatter: " + envelope.toString());
         VotingMatter matter;
         try {
             matter = new Gson().fromJson(envelope.getRawMessage(), VotingMatter.class);

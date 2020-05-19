@@ -275,6 +275,6 @@ public class BlockchainHelper {
 
     private void print(String message) {
         if (doPrint)
-            System.out.println("[" + Thread.currentThread().getId() + "] [" + getClass().getName() + "][" + hyperZMQ.getClientID() + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
     }
 }

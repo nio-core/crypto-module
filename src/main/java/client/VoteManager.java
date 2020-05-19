@@ -1,7 +1,19 @@
 package client;
 
 import blockchain.BlockchainHelper;
+import diffiehellman.DHKeyExchange;
+import diffiehellman.EncryptedStream;
 import groups.Envelope;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
+import joingroup.JoinRequest;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
 import subgrouping.ISubgroupSelector;
@@ -12,15 +24,6 @@ import voting.Vote;
 import voting.VotingMatter;
 import voting.VotingResult;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static groups.Envelope.MESSAGETYPE_VOTE;
 
 public class VoteManager {
@@ -28,10 +31,14 @@ public class VoteManager {
     private final HyperZMQ hyperZMQ;
 
     private final BlockingQueue<VotingMatter> votingMatters = new ArrayBlockingQueue<>(100);
-    private final BlockingQueue<VotingMatter> joinRequest = new ArrayBlockingQueue<>(100);
+    private final BlockingQueue<JoinRequest> joinRequests = new ArrayBlockingQueue<>(100);
+    private final BlockingQueue<ImmutablePair<VotingResult, Boolean>> finishedVotes = new ArrayBlockingQueue<>(100);
 
     private final AtomicBoolean runVoteRequiredHandler = new AtomicBoolean(true);
     private final AtomicBoolean runVotingProcessHandler = new AtomicBoolean(true);
+    private final AtomicBoolean runVotingFinisher = new AtomicBoolean(true);
+
+    private final ExecutorService votingFinisherExecutor = Executors.newSingleThreadExecutor();
 
     // Variables for selecting a subgroup of participants when voting
     private ISubgroupSelector subgroupSelector = null;
@@ -51,6 +58,9 @@ public class VoteManager {
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
+        startVoteRequiredHandler();
+        startVotingProcessHandler();
+        startVotingFinisher();
     }
 
     /**
@@ -101,6 +111,7 @@ public class VoteManager {
                 }
             }
         }
+        print("Stopping VoteRequiredLoop...");
     }
 
     /**
@@ -110,17 +121,17 @@ public class VoteManager {
     private void handleVotingProcessLoop() {
         print("Starting VoteProcessLoop...");
         while (runVotingProcessHandler.get()) {
-            VotingMatter matter = null;
+            JoinRequest joinRequest = null;
             try {
                 // Use a timeout here, because the thread could have been shut down meanwhile
-                matter = joinRequest.poll(1000, TimeUnit.MILLISECONDS);
+                joinRequest = this.joinRequests.poll(1000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (matter != null) {
-                print("Received VotingMatter to moderate process for: " + matter.toString());
+            if (joinRequest != null) {
+                print("Received JoinRequest to moderate process for: " + joinRequest.toString());
                 IVotingProcess process = null;
-                switch (matter.getJoinRequest().getType()) {
+                switch (joinRequest.getType()) {
                     case GROUP: {
                         process = votingProcessGroup;
                         break;
@@ -133,18 +144,81 @@ public class VoteManager {
                         break;
                 }
                 if (process != null) {
-                    // Select the participants // TODO do this when votingMatter is created
-                    print("Starting VoteProcess...");
-                    VotingResult result = process.vote(matter);
+                    // Select the participants
+                    print("Selecting participants for vote...");
+                    List<String> groupMembers = hyperZMQ.getGroupMembers(joinRequest.getGroupName());
+                    // Let self vote 7
+
+                    if (groupMembers.size() > votingParticipantsThreshold) {
+                        if (subgroupSelector == null) {
+                            throw new IllegalStateException("No SubGroupSelector available but is required.");
+                        }
+                        groupMembers = subgroupSelector.selectSubgroup(groupMembers, votingParticipantsThreshold);
+                    }
+
+                    VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, joinRequest);
+
+                    VotingResult result = process.vote(votingMatter);
                     print("VoteProcess finished with result: " + result.toString());
-                    boolean isApproved = voteEvaluator.evaluateVotes(result); // TODO how to pass this and where???
+                    boolean isApproved = voteEvaluator.evaluateVotes(result);
                     print("Votes were evaluated with result: " + isApproved);
                     ImmutablePair<VotingResult, Boolean> resultPair = new ImmutablePair<>(result, isApproved);
-
+                    try {
+                        finishedVotes.put(resultPair);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
+        print("Stopping VotingProcessLoop...");
+    }
 
+    private void handleFinishedVotes() {
+        print("Starting VoteFinisherLoop...");
+        while (runVotingFinisher.get()) {
+            ImmutablePair<VotingResult, Boolean> resultPair = null;
+            try {
+                resultPair = finishedVotes.poll(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (resultPair != null) {
+                // Finish the voting by telling the applicant the result
+                // if the result is yes and voting was about joining a group, send the group key to the applicant
+                // using an encrypted channel that is created by doing diffie hellman
+
+                // The applicant should be listening on the address specified in the JoinRequest
+                VotingResult result = resultPair.left;
+                JoinRequest joinRequest = result.getVotingMatter().getJoinRequest();
+                DHKeyExchange exchange = new DHKeyExchange(hyperZMQ.getClientID(),
+                        hyperZMQ.getSawtoothSigner(),
+                        joinRequest.getApplicantPublicKey(),
+                        joinRequest.getAddress(),
+                        joinRequest.getPort(), false);
+                print("Starting DH...");
+                EncryptedStream encryptedStream = null;
+                try {
+                    encryptedStream = exchange.call();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (encryptedStream != null) {
+                    if (resultPair.right) {
+                        print("Sending key of group: " + joinRequest.getGroupName());
+                        encryptedStream.write(hyperZMQ.getKeyForGroup(joinRequest.getGroupName()));
+                    } else {
+                        print("Sending vote denied response.");
+                        encryptedStream.write("Vote denied");
+                    }
+                } else {
+                    // TODO
+                    print("Diffie- Hellman key exchange failed!");
+                }
+            }
+        }
+        print("Stopping VoteFinisherLoop...");
     }
 
     private void print(String message) {
@@ -209,7 +283,6 @@ public class VoteManager {
     }
 
     public void stopVoteRequiredHandler() {
-        print("Stopping VoteRequiredHandler...");
         runVoteRequiredHandler.set(false);
     }
 
@@ -219,7 +292,6 @@ public class VoteManager {
     }
 
     public void stopVotingProcessHandler() {
-        print("Stopping VotingProcessHandler...");
         runVotingProcessHandler.set(false);
     }
 
@@ -228,11 +300,20 @@ public class VoteManager {
         votingProcessExecutor.submit(t);
     }
 
+    public void startVotingFinisher() {
+        Thread t = new Thread(this::handleFinishedVotes);
+        votingFinisherExecutor.submit(t);
+    }
+
+    public void stopVotingFinisher() {
+        runVotingFinisher.set(false);
+    }
+
     public void addVoteRequired(VotingMatter votingMatter) {
         votingMatters.add(votingMatter);
     }
 
-    public void addJoinRequest(VotingMatter votingMatter) {
-        joinRequest.add(votingMatter);
+    public void addJoinRequest(JoinRequest joinRequest) {
+        joinRequests.add(joinRequest);
     }
 }

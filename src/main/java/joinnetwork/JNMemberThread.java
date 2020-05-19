@@ -1,64 +1,55 @@
 package joinnetwork;
 
-import client.JoiningManager;
-import messages.JNChallengeMessage;
-import messages.JNResponseMessage;
-import sawtooth.sdk.signing.Signer;
-import util.Utilities;
-
+import blockchain.SawtoothUtils;
+import client.NetworkJoinManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.security.SignatureException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import joingroup.JoinRequest;
+import messages.JNChallengeMessage;
+import messages.JNResponseMessage;
+import sawtooth.sdk.signing.Signer;
+import util.Utilities;
 
 /**
- * This is the thread for the Network member that authenticates an applicant and notifies it about the result of the voting
- * The communication uses PUB/SUB with the topic of the applicant id + topic suffix
+ * This is the thread for the Network member that authenticates an applicant using challenge response.
+ * The identity that is verified is the Sawtooth public key.
+ * If the authentication is successful,
  * Counterpart is JNApplicantThread
  **/
-public class JNMemberThread implements Runnable, IJNMemberThread {
+public class JNMemberThread implements Runnable {
 
-    private String myID;
-    private String applID;
-    private String applPublicKey;
-    private IJNMember callback;
-    private String address;
-    private Signer mySigner;
-    private String myPublicKeyHex;
+    private final String myID;
+    private final JoinRequest joinRequest;
+    private final Signer mySigner;
+    private final String myPublicKeyHex;
     private static final int NONCE_SIZE_IN_CHARS = 32;
     private static final int SOCKET_TIMEOUT_S = 60;
 
-    private Future<Boolean> votingResult;
-
-    private String topic_prefix;
+    private final NetworkJoinManager joiningManager;
 
     private final boolean doPrint = true;
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
-    public JNMemberThread(String myID, String address, String applID, String applPublicKey, Signer mySigner,
-                          String myPublicKeyHex, IJNMember callback) {
+    public JNMemberThread(String myID, JoinRequest joinRequest, Signer mySigner,
+                          String myPublicKeyHex, NetworkJoinManager joiningManager) {
         this.myID = myID;
-        this.address = address;
-        this.applID = applID;
-        this.applPublicKey = applPublicKey;
+        this.joinRequest = joinRequest;
         this.mySigner = mySigner;
         this.myPublicKeyHex = myPublicKeyHex;
-        this.callback = callback;
-        this.topic_prefix = applID + JoiningManager.JOIN_SAWTOOTH_NETWORK_TOPIC;
+        this.joiningManager = joiningManager;
     }
 
     @Override
     public void run() {
-        print("Starting for applicant " + applID);
+        print("Starting for request " + joinRequest.toString());
 
         // Connect to the server at the address+port
         try {
-            Socket socket = new Socket("localhost", 5555);
+            Socket socket = new Socket(joinRequest.getAddress(), joinRequest.getPort());
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -77,38 +68,24 @@ public class JNMemberThread implements Runnable, IJNMemberThread {
             JNResponseMessage response;
             response = Utilities.deserializeMessage(recv, JNResponseMessage.class);
             if (response == null) return; // TODO
-            boolean valid = Utilities.verify(response.getSignablePayload(), response.getSignature(), applPublicKey);
-
+            boolean valid = SawtoothUtils.verify(response.getSignablePayload(),
+                    response.getSignature(),
+                    joinRequest.getApplicantPublicKey());
+            // TODO which messages to send here in the first step
             if (valid) {
                 out.println("OK!!!");
-                //pubSocket.send("OK!!!", currentTopic);
-
-                callback.votingRequired(applID, applPublicKey);
+                joiningManager.authenticationSuccess(joinRequest);
             } else {
-                callback.error(new SignatureException("Provided public key did not match signature!"));
-                return;
+                out.println("Invalid signature!");
+                joiningManager.authenticationFailure(joinRequest);
             }
         } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-        // Wait for voting
-        try {
-            votingResult.get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[JNMemberThread" + Thread.currentThread().getId() + "][" + myID + "] " + message);
-    }
-
-    @Override
-    public void votingFinished(boolean result) {
+            System.out.println("[" + Thread.currentThread().getId() + "] [JoinNetworkMember][" + myID + "] " + message);
     }
 }

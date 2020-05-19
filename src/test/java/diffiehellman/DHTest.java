@@ -1,18 +1,11 @@
 package diffiehellman;
 
 import client.HyperZMQ;
-import diffiehellman.DHKeyExchange;
-import diffiehellman.EncryptedStream;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import org.junit.Assert;
 import org.junit.Test;
-import org.spongycastle.util.Arrays;
-
-import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 
 public class DHTest {
 

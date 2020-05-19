@@ -2,13 +2,25 @@ package blockchain;
 
 import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import joingroup.JoinRequest;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.*;
+import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
+import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
+import sawtooth.sdk.protobuf.Event;
+import sawtooth.sdk.protobuf.EventFilter;
+import sawtooth.sdk.protobuf.EventList;
+import sawtooth.sdk.protobuf.EventSubscription;
+import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Message.MessageType;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EventHandler implements AutoCloseable {
     private final HyperZMQ hyperzmq;
@@ -16,9 +28,16 @@ public class EventHandler implements AutoCloseable {
 
     private String validatorURL = "";
     private final ZMQ.Socket socket;
+
     private final AtomicBoolean runListenerLoop = new AtomicBoolean(true);
-    private final List<Message> subscriptionQueue = new ArrayList<>(); // Used by two threads
-    private int receiveTimeoutMS = 300;
+    private final AtomicBoolean runDistributorLoop = new AtomicBoolean(true);
+
+    private final ExecutorService eventDistributionExecutor = Executors.newSingleThreadExecutor();
+
+    private final BlockingQueue<Message> eventQueue = new ArrayBlockingQueue<Message>(100);
+    private final BlockingQueue<Message> subscriptionQueue = new ArrayBlockingQueue<Message>(100);
+
+    private int receiveTimeoutMS = 700;
     private final ZContext context;
 
     public EventHandler(HyperZMQ callback) {
@@ -28,21 +47,132 @@ public class EventHandler implements AutoCloseable {
         //this.sendSocket = context.createSocket(ZMQ.DEALER);
         this.socket.setReceiveTimeOut(receiveTimeoutMS);
         startListenerLoop();
+        startEventDistributorLoop();
+    }
+
+    void startEventDistributorLoop() {
+        runDistributorLoop.set(true);
+        Thread t = new Thread(this::eventDistributorLoop);
+        eventDistributionExecutor.submit(t);
+    }
+
+    void stopEventDistributor() {
+        print("Stopping EventDistributor");
+        runDistributorLoop.set(false);
+    }
+
+    /**
+     * This loop distributes the events that received by the socket to the corresponding queues
+     */
+    private void eventDistributorLoop() {
+        print("Starting EventDistributorLoop...");
+        while (runDistributorLoop.get()) {
+            Message messageReceived = null;
+            try {
+                messageReceived = eventQueue.poll(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (messageReceived != null) {
+                switch (messageReceived.getMessageType()) {
+                    case CLIENT_EVENTS: {
+                        EventList list = null;
+                        try {
+                            list = EventList.parseFrom(messageReceived.getContent());
+                        } catch (InvalidProtocolBufferException e) {
+                            e.printStackTrace();
+                            break;
+                        }
+                        // TODO distribute events here depending on type
+                        for (Event e : list.getEventsList()) {
+                            String received = e.toString();
+                            print("Received Event: " + received);
+
+                            // Check whether the event is a new encrypted message or a join request
+                            Event.Attribute attr = e.getAttributes(0);
+                            if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
+                                //hyperzmq.handleJoinGroupRequest(e.getData().toStringUtf8());
+                                JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
+                                if (request != null) {
+                                    print("Received JoinGroupRequest: " + request.toString());
+
+                                    // Check if we are responsible for the request
+                                    if (!request.getContactPublicKey().equals(hyperzmq.getSawtoothPublicKey())) {
+                                        print("This client is not responsible for the request");
+                                        return;
+                                    }
+
+                                    // Check if we can access the requested key beforehand
+                                    Objects.requireNonNull(hyperzmq.getKeyForGroup(request.getGroupName()),
+                                            "Client does not have the key that was requested!");
+
+                                    // Pass control to VoteManager
+                                    hyperzmq.getVoteManager().addJoinRequest(request);
+                                    return;
+                                }
+
+                            }
+
+                            //-----------------------------------------------------------------------------------
+                            //  Handle Group Messages (Normal message, Contract, VotingMatter, Vote)
+                            //  Filter for VotingMatter and Vote to put those in the corresponding queues
+                            //-----------------------------------------------------------------------------------
+                            String fullMessage = received.substring(received.indexOf("data"));
+                            //print("fullMessage: " + fullMessage);
+
+                            String csvMessage = fullMessage.substring(7, fullMessage.length() - 2); //TODO
+                            //print("csvMessage: " + csvMessage);
+
+                            String[] parts = csvMessage.split(",");
+                            if (parts.length < 2) {
+                                print("Malformed event payload: " + csvMessage);
+                                return;
+                            }
+                            String group = parts[0];
+                            String encMessage = parts[1];
+                            //print("Group: " + group);
+                            //print("Encrypted Message: " + encMessage);
+
+                            hyperzmq.newEventReceived(group, encMessage);
+                        }
+                        break;
+                    }
+                    case CLIENT_EVENTS_SUBSCRIBE_RESPONSE: {
+                        // Check for subscription success, nothing else to do
+                        try {
+                            ClientEventsSubscribeResponse cesr = ClientEventsSubscribeResponse.parseFrom(messageReceived.getContent());
+                            print("Subscription was " + (cesr.getStatus() == ClientEventsSubscribeResponse.Status.OK ?
+                                    "successful" : "unsuccessful"));
+                        } catch (InvalidProtocolBufferException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    }
+                    default: {
+                        print("Received message has unknown type: " + messageReceived.toString());
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     private void startListenerLoop() {
-        socket.connect(getValidatorURL());
         // The loop consists of the socket receiving with a timeout.
         // After each receive, the queue is checked whether there are messages to send
         Thread t = new Thread(() -> {
+            //print("Connecting to: " + getValidatorURL());
+            print("Starting EventListenerLoop...");
+            socket.connect(getValidatorURL());
             while (runListenerLoop.get()) {
                 // If something is in the queue, send that message
                 Message messageToSent = null;
-                synchronized (subscriptionQueue) {
-                    if (!subscriptionQueue.isEmpty()) {
-                        messageToSent = subscriptionQueue.remove(0);
-                    }
+                try {
+                    messageToSent = subscriptionQueue.remove();
+                } catch (NoSuchElementException ignored) {
+                    // It's ok that the queue is empty
                 }
+
                 if (messageToSent != null) {
                     // The message is already protobuf, ready to be sent
                     socket.send(messageToSent.toByteArray());
@@ -50,69 +180,20 @@ public class EventHandler implements AutoCloseable {
                 }
 
                 // Try to receive a message
+                //print("!!!Receiving Event...!!!");
                 byte[] recv = socket.recv();
+                //print("!!!Receiving end!!!");
                 if (recv != null) {
                     try {
                         Message messageReceived = Message.parseFrom(recv);
-                        if (messageReceived != null) {
-                            switch (messageReceived.getMessageType()) {
-                                case CLIENT_EVENTS: {
-                                    EventList list = EventList.parseFrom(messageReceived.getContent());
-                                    for (Event e : list.getEventsList()) {
-                                        String received = e.toString();
-                                        print("Received Event: " + received);
-
-                                        // Check whether the event is a new encrypted message or a join request
-                                        Event.Attribute attr = e.getAttributes(0);
-                                        if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
-                                            hyperzmq.handleJoinGroupRequest(e.getData().toStringUtf8());
-                                            return;
-                                        }
-
-                                        String fullMessage = received.substring(received.indexOf("data"));
-                                        //print("fullMessage: " + fullMessage);
-
-                                        String csvMessage = fullMessage.substring(7, fullMessage.length() - 2); //TODO
-                                        //print("csvMessage: " + csvMessage);
-
-                                        String[] parts = csvMessage.split(",");
-                                        if (parts.length < 2) {
-                                            print("Malformed event payload: " + csvMessage);
-                                            return;
-                                        }
-                                        String group = parts[0];
-                                        String encMessage = parts[1];
-                                        //print("Group: " + group);
-                                        //print("Encrypted Message: " + encMessage);
-
-                                        hyperzmq.newEventReceived(group, encMessage);
-                                    }
-                                    break;
-                                }
-                                case CLIENT_EVENTS_SUBSCRIBE_RESPONSE: {
-                                    // Check for subscription success
-                                    try {
-                                        ClientEventsSubscribeResponse cesr = ClientEventsSubscribeResponse.parseFrom(messageReceived.getContent());
-                                        print("Subscription was " + (cesr.getStatus() == ClientEventsSubscribeResponse.Status.OK ?
-                                                "successful" : "unsuccessful"));
-                                    } catch (InvalidProtocolBufferException e) {
-                                        e.printStackTrace();
-                                    }
-                                    break;
-                                }
-                                default: {
-                                    print("Received message has unknown type: " + messageReceived.toString());
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (InvalidProtocolBufferException e) {
+                        eventQueue.put(messageReceived);
+                    } catch (InvalidProtocolBufferException | InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
             }
             // End while
-            print("Exiting...");
+            print("Exiting EventListenerLoop...");
             socket.close();
         });
         t.start();
@@ -127,10 +208,10 @@ public class EventHandler implements AutoCloseable {
         queueNewSubscription(groupName, eventFilter);
     }
 
-    private void queueNewSubscription(String eventName, EventFilter eventFilter) {
+    void queueNewSubscription(String eventName, EventFilter eventFilter) {
         // Build a subscription message ready to be sent which will be queued
         EventSubscription eventSubscription = EventSubscription.newBuilder()
-                .addFilters(eventFilter)
+               // .addFilters(eventFilter)
                 .setEventType(eventName)
                 .build();
 
@@ -144,8 +225,11 @@ public class EventHandler implements AutoCloseable {
                 .setContent(request.toByteString())
                 .build();
 
-        synchronized (subscriptionQueue) {
-            subscriptionQueue.add(message);
+        try {
+            print("Queueing subscription: " + request.toString());
+            subscriptionQueue.put(message);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -154,7 +238,7 @@ public class EventHandler implements AutoCloseable {
     }
 
     private void print(String msg) {
-        System.out.println("[" + Thread.currentThread().getId() + "]" + "[EventHandler " + hyperzmq.getClientID() + "] " + msg);
+        System.out.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
     }
 
     public void setValidatorURL(String validatorURL) {
@@ -163,6 +247,7 @@ public class EventHandler implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        runDistributorLoop.set(false);
         runListenerLoop.set(false);
         socket.close();
         context.close();

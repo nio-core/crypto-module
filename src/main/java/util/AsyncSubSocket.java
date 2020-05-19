@@ -5,14 +5,14 @@ import org.zeromq.ZMQ;
 
 public class AsyncSubSocket implements Runnable {
 
-    private IAsyncSubSocketCallback callback;
-    private ZContext context;
-    private ZMQ.Socket socket;
+    private final IAsyncSubSocketCallback callback;
+    private final ZContext context;
+    private final ZMQ.Socket socket;
     private boolean doRun = true;
-    private int receiveTimeoutMS;
-    private String topic;
-    private static final boolean doPrint = false;
-    private String address;
+    private final int receiveTimeoutMS;
+    private final String topic;
+    private static final boolean doPrint = true;
+    private final String address;
 
     public AsyncSubSocket(IAsyncSubSocketCallback callback, String address, String topic, int receiveTimeoutMS) {
         this.callback = callback;
@@ -66,6 +66,6 @@ public class AsyncSubSocket implements Runnable {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[AsyncRSocket][" + topic + "][" + address + "] " + message);
+            System.out.println("[AsyncSubSocket][" + topic + "][" + address + "] " + message);
     }
 }
