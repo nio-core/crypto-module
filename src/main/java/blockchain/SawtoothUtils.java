@@ -1,21 +1,15 @@
-package client;
+package blockchain;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.google.protobuf.ByteString;
-import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.Utils;
-import sawtooth.sdk.processor.exceptions.InternalError;
-import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
-import sawtooth.sdk.signing.*;
+import sawtooth.sdk.signing.PrivateKey;
+import sawtooth.sdk.signing.PublicKey;
+import sawtooth.sdk.signing.Secp256k1Context;
+import sawtooth.sdk.signing.Secp256k1PrivateKey;
+import sawtooth.sdk.signing.Secp256k1PublicKey;
 
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Collect all Sawtooth related helper methods here,

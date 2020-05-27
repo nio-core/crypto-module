@@ -1,20 +1,22 @@
 package joinnetwork;
 
-import client.JNManager;
-import messages.JNChallengeMessage;
-import messages.JNRequestMessage;
-import messages.JNResponseMessage;
-import sawtooth.sdk.signing.Signer;
-import util.PubSocket;
-import util.Utilities;
-
+import blockchain.SawtoothUtils;
+import client.NetworkJoinManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import joingroup.JoinRequest;
+import messages.JNChallengeMessage;
+import messages.JNResponseMessage;
+import messages.MessageFactory;
+import sawtooth.sdk.signing.Signer;
+import util.PubSocket;
+import util.Utilities;
+import voting.JoinRequestType;
 
 /**
  * The Thread for an applicant that wants to join the network.
@@ -27,38 +29,48 @@ public class JNApplicantThread implements Runnable {
 
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
-    private String address; // TODO sub/pub different addresses?
-    private String myID;
-    private String myPublicKey;
-    private Signer mySigner;
-
-    private JNManager client;
-
+    private final String address;
+    private final String myID;
+    private final String myPublicKey;
+    private final Signer mySigner;
+    private final int port;
+    private final NetworkJoinManager client;
+    private final Map<String, String> additionalInfo;
     private final boolean doPrint = true;
+    private final String pubSocketAddress;
 
-    public JNApplicantThread(String myID, String myPublicKey, Signer mySigner, JNManager client,
-                             String address) {
+    public JNApplicantThread(String myID, String myPublicKey, Signer mySigner, NetworkJoinManager client,
+                             String address, int port, Map<String, String> additionalInfo, String pubSocketAddress) {
         this.myID = myID;
         this.myPublicKey = myPublicKey;
         this.mySigner = mySigner;
         this.client = client;
         this.address = address;
+        this.port = port;
+        this.additionalInfo = additionalInfo;
+        this.pubSocketAddress = pubSocketAddress;
     }
 
     @Override
     public void run() {
         // Send a JoinNetworkRequestMessage to the "join network" topic initially
-
-        PubSocket pubSocket = new PubSocket(address);
-        JNRequestMessage message1 = new JNRequestMessage(myID, myPublicKey);
-        pubSocket.send(message1.toString(), JNManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
+        print("Starting JNApplicantThread...");
+        PubSocket pubSocket = new PubSocket(pubSocketAddress);
+        JoinRequest joinRequest = new JoinRequest(myPublicKey,
+                null,
+                JoinRequestType.NETWORK,
+                null,
+                additionalInfo,
+                address,
+                port);
+        pubSocket.send(joinRequest.toString(), NetworkJoinManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
         print("Sent join request");
         //print("sent message:" + message1.toString());
 
         // Im the server
         try {
-            print("Starting server");
-            ServerSocket serverSocket = new ServerSocket(5555);
+            print("Starting server to listen for challenge");
+            ServerSocket serverSocket = new ServerSocket(port);
             Socket clientSocket = serverSocket.accept();
 
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -72,7 +84,7 @@ public class JNApplicantThread implements Runnable {
             if (challenge == null) return; // TODO
 
             // Verify the network member
-            boolean verified = Utilities.verify(challenge.getSignablePayload(),
+            boolean verified = SawtoothUtils.verify(challenge.getSignablePayload(),
                     challenge.getSignature(),
                     challenge.getMemberPublicKey());
 
@@ -82,14 +94,16 @@ public class JNApplicantThread implements Runnable {
             }
             print("Signature verified");
 
-            // Sign the nonce and create response
-            JNResponseMessage response = new JNResponseMessage(challenge.getNonce(),
-                    mySigner.sign(challenge.getNonce().getBytes(StandardCharsets.UTF_8)));
+            JNResponseMessage response = new MessageFactory(mySigner)
+                    .jnResponseMessage(challenge.getNonce());
+
             out.println(response.toString());
             print("Sent response: " + response);
             // Wait for ok
             s = in.readLine();
             print(s);
+
+            // TODO if ok authenticated - setup server again to listen for vote result
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -98,6 +112,6 @@ public class JNApplicantThread implements Runnable {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[JNApplicantThread" + Thread.currentThread().getId() + "][" + myID + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [JoinNetworkApplicant][" + myID + "] " + message);
     }
 }

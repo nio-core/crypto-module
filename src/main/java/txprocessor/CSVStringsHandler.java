@@ -1,29 +1,35 @@
 package txprocessor;
 
-import client.SawtoothUtils;
+import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
-import joingroup.JoinGroupRequest;
+import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import joingroup.JoinRequest;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
-import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
 
-import java.util.*;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CSVStringsHandler implements TransactionHandler {
     private final String namespace = "2f9d35";
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
     CSVStringsHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
-        print("Starting TransactionProcessor with namespace '" + namespace + "'");
+        print("Starting CSVStringsTP with namespace '" + namespace + "'");
     }
 
     @Override
@@ -76,17 +82,18 @@ public class CSVStringsHandler implements TransactionHandler {
 
         // Check if the payload is a JoinRequest
         try {
-            JoinGroupRequest request = new Gson().fromJson(payloadStr, JoinGroupRequest.class);
+            JoinRequest request = new Gson().fromJson(payloadStr, JoinRequest.class);
             //handleJoinRequest(tpProcessRequest, context, request);
-            print("handling JoinRequest...");
+            //print("handling JoinRequest...");
 
             // First check if the applicant submitted the request
             //TODO
-            if (request.getApplicantPublicKey().equals(tpProcessRequest.getHeader().getSignerPublicKey())) {
-                print("JoinRequest: public keys match");
+            if (!request.getApplicantPublicKey().equals(tpProcessRequest.getHeader().getSignerPublicKey())) {
+                print("JoinRequest: public keys do not match. The transaction is invalid.");
+                return;
             }
 
-            print("broadcasting JoinRequest");
+            print("Broadcasting JoinRequest");
             // Broadcast the the request via event subsystem
             Map.Entry<String, String> e = new AbstractMap.SimpleEntry<>("address", namespace);
             Collection<Map.Entry<String, String>> collection = Arrays.asList(e);
@@ -144,22 +151,18 @@ public class CSVStringsHandler implements TransactionHandler {
         //print("signer Public key: " + signerPub);
 
         // Fire event with the message
-        print("firing event...");
         Map.Entry<String, String> e = new AbstractMap.SimpleEntry<>("address", address);
-        Collection<Map.Entry<String, String>> collection = Arrays.asList(e);
+        Collection<Map.Entry<String, String>> eventAttributes = Collections.singletonList(e);
+        print("Firing event with attributes: " + eventAttributes.toString() + ", Eventype: " + group);
         try {
-            context.addEvent(group, collection, tpProcessRequest.getPayload());
+            context.addEvent(group, eventAttributes, tpProcessRequest.getPayload());
             //print("Event triggered");
         } catch (InternalError internalError) {
             internalError.printStackTrace();
         }
     }
 
-    private void handleJoinRequest(TpProcessRequest tpProcessRequest, Context context, JoinGroupRequest request) {
-
-    }
-
     void print(String message) {
-        System.out.println("[TP]  " + message);
+        System.out.println("[CSVStringTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }

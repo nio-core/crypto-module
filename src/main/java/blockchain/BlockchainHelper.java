@@ -1,16 +1,30 @@
-package client;
+package blockchain;
 
+import client.HyperZMQ;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.bitcoinj.core.Utils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.*;
+import sawtooth.sdk.protobuf.Batch;
+import sawtooth.sdk.protobuf.BatchHeader;
+import sawtooth.sdk.protobuf.BatchList;
+import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
+import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
+import sawtooth.sdk.protobuf.ClientStateGetRequest;
+import sawtooth.sdk.protobuf.ClientStateGetResponse;
+import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.Transaction;
+import sawtooth.sdk.protobuf.TransactionHeader;
 import sawtooth.sdk.signing.Signer;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -22,38 +36,37 @@ import java.util.stream.Stream;
 public class BlockchainHelper {
 
     private String baseRestAPIUrl;
-    private Signer signer;
-    private HyperZMQ hyperZMQ;
-    private boolean printRESTAPIResponse = false;
+    private final HyperZMQ hyperZMQ;
+    private final boolean printRESTAPIResponse = false;
     private ZContext zContext = new ZContext();
-    private ZMQ.Socket submitSocket;
+    private final ZMQ.Socket submitSocket;
 
     public static final String KEY_EXCHANGE_RECEIPT_FAMILY = "KeyExchangeReceipt";
     public static final String KEY_EXCHANGE_RECEIPT_NAMESPACE = "ac0cab";
     public static final String CSVSTRINGS_FAMILY = "csvstrings";
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
+    private boolean doPrint = true;
 
-    BlockchainHelper(HyperZMQ hyperZMQ, Signer signer) {
+    public BlockchainHelper(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
         baseRestAPIUrl = ValidatorAddress.REST_URL_DEFAULT;
-        this.signer = signer;
 
         submitSocket = zContext.createSocket(ZMQ.DEALER);
         submitSocket.connect(ValidatorAddress.VALIDATOR_URL_DEFAULT);
-    }
-
-    public void setSigner(Signer signer) {
-        this.signer = signer;
     }
 
     public void setBaseRestAPIUrl(String baseRestAPIUrl) {
         this.baseRestAPIUrl = baseRestAPIUrl;
     }
 
-    Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload, String outputAddr) {
-        // Create Transaction Header
+    public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload) {
+        return buildTransaction(transactionFamily, txFamVersion, payload, null);
+    }
+
+    public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload, String outputAddr) {
+        Signer signer = hyperZMQ.getSawtoothSigner();
         if (signer == null) {
-            throw new IllegalStateException("No signer for the transaction, returning.");
+            throw new IllegalStateException("Signer for transaction could not be acquired!");
         }
 
         // Set in- and outputs to the transaction family namespace to limit their read and write to their own namespaces
@@ -64,6 +77,7 @@ public class BlockchainHelper {
         }
         String outputs = outputAddr == null ? input : outputAddr;
 
+        // Create Transaction Header
         TransactionHeader header = TransactionHeader.newBuilder()
                 .setSignerPublicKey(signer.getPublicKey().hex())
                 .setFamilyName(transactionFamily)       // Has to be identical in TP
@@ -77,7 +91,6 @@ public class BlockchainHelper {
 
         // Create the Transaction
         String signature = signer.sign(header.toByteArray());
-
         return Transaction.newBuilder()
                 .setHeader(header.toByteString())
                 .setPayload(ByteString.copyFrom(payload))
@@ -85,11 +98,11 @@ public class BlockchainHelper {
                 .build();
     }
 
-    boolean buildAndSendBatch(List<Transaction> transactionList) {
+    public boolean buildAndSendBatch(List<Transaction> transactionList) {
         // Wrap the transactions in a Batch (atomic unit)
         // Create the BatchHeader
         BatchHeader batchHeader = BatchHeader.newBuilder()
-                .setSignerPublicKey(signer.getPublicKey().hex())
+                .setSignerPublicKey(hyperZMQ.getSawtoothSigner().getPublicKey().hex())
                 .addAllTransactionIds(
                         transactionList
                                 .stream()
@@ -100,7 +113,7 @@ public class BlockchainHelper {
 
         // Create the Batch
         // The signature of the batch acts as the Batch's ID
-        String batchSignature = signer.sign(batchHeader.toByteArray());
+        String batchSignature = hyperZMQ.getSawtoothSigner().sign(batchHeader.toByteArray());
         Batch batch = Batch.newBuilder()
                 .setHeader(batchHeader.toByteString())
                 .addAllTransactions(transactionList)
@@ -117,7 +130,7 @@ public class BlockchainHelper {
         return sendBatchListZMQ(batchListBytes);
     }
 
-    String getStateZMQ(String address) {
+    public String getStateZMQ(String address) {
         ClientStateGetRequest req = ClientStateGetRequest.newBuilder()
                 .clearStateRoot()
                 .setAddress(address)
@@ -167,7 +180,7 @@ public class BlockchainHelper {
             //System.out.println("ClientBatchSubmitResponse parsed: " + cbsResp);
             // Check submission status
             boolean success = cbsResp.getStatus() == ClientBatchSubmitResponse.Status.OK;
-            hyperZMQ.print("Batch submit was " + (success ? "successful" : "not successful"));
+            print("Batch submit was " + (success ? "successful" : "not successful"));
             return success;
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();
@@ -175,6 +188,7 @@ public class BlockchainHelper {
         }
     }
 
+    // Deprecated, use ZMQ variant instead
     private boolean sendBatchListRESTAPI(byte[] body) throws IOException {
         URL url = new URL(baseRestAPIUrl + "/batches");
         URLConnection con = url.openConnection();
@@ -200,11 +214,12 @@ public class BlockchainHelper {
         }
 
         if (response != null && printRESTAPIResponse) {
-            hyperZMQ.print(response);
+            print(response);
         }
         return true;
     }
 
+    // Deprecated, use ZMQ variant instead
     private String sendToRestEndpoint(String restEndpoint, String requestMethod, byte[] payload) throws IOException {
         URL url = new URL(baseRestAPIUrl + restEndpoint);
         URLConnection con = url.openConnection();
@@ -235,7 +250,7 @@ public class BlockchainHelper {
         }
 
         if (response != null && printRESTAPIResponse) {
-            hyperZMQ.print(response);
+            print(response);
         }
         return response;
     }
@@ -260,5 +275,10 @@ public class BlockchainHelper {
         if (baseRestAPIUrl.endsWith("/")) {
             baseRestAPIUrl = baseRestAPIUrl.substring(0, baseRestAPIUrl.length() - 2);
         }
+    }
+
+    private void print(String message) {
+        if (doPrint)
+            System.out.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
     }
 }

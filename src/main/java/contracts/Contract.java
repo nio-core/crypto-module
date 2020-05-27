@@ -1,7 +1,6 @@
 package contracts;
 
-import client.BlockchainHelper;
-import client.HyperZMQ;
+import blockchain.BlockchainHelper;
 import com.google.gson.Gson;
 import sawtooth.sdk.processor.Utils;
 

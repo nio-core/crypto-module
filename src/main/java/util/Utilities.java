@@ -2,34 +2,9 @@ package util;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import org.bitcoinj.core.Utils;
-import sawtooth.sdk.signing.*;
-
 import java.security.SecureRandom;
 
 public class Utilities {
-
-    public static String sign(String message, String privateKey) {
-        PrivateKey privateKey1 = new Secp256k1PrivateKey(Utils.HEX.decode(privateKey));
-        return sign(message, privateKey1);
-    }
-
-    public static String sign(String message, PrivateKey privateKey) {
-        System.out.println("Signing " + message);
-        return new Secp256k1Context().sign(message.getBytes(), privateKey);
-    }
-
-    public static boolean verify(String message, String signature, String publicKey) {
-        System.out.println("verifying " + message + " with signature=" + signature + ", pub=" + publicKey);
-        PublicKey publicKey1 = new Secp256k1PublicKey(Utils.HEX.decode(publicKey));
-        System.out.println("Publickey: " + publicKey1.hex());
-        return verify(message, signature, publicKey1);
-    }
-
-    public static boolean verify(String message, String signature, PublicKey publicKey) {
-        return new Secp256k1Context().verify(signature, message.getBytes(), publicKey);
-    }
-
     /**
      * Encapsulate Gson object creation from Json
      *

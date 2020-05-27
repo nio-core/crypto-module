@@ -1,4 +1,6 @@
-package voting;
+package groups;
+
+import voting.Vote;
 
 public interface IGroupVoteReceiver {
 

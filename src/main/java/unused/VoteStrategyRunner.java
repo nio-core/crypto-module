@@ -1,6 +1,9 @@
-package voting;
+package unused;
 
 import sawtooth.sdk.signing.Signer;
+import voting.IVotingStrategy;
+import voting.Vote;
+import voting.VotingMatter;
 
 import java.util.concurrent.Callable;
 

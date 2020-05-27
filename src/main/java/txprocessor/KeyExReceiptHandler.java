@@ -1,14 +1,14 @@
 package txprocessor;
 
-import client.SawtoothUtils;
+import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
+import java.text.SimpleDateFormat;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
-import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
@@ -16,14 +16,13 @@ import sawtooth.sdk.signing.PublicKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PublicKey;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class KeyExReceiptHandler implements TransactionHandler {
 
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
     private static final String TRANSACTION_FAMILY_NAME = "KeyExchangeReceipt";
     private static final String TRANSACTION_FAMILY_VERSION = "0.1";
     private String namespace = "ac0cab";
@@ -32,10 +31,6 @@ public class KeyExReceiptHandler implements TransactionHandler {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
         print("Starting KeyExchangeReceiptTP with namespace '" + namespace + "'");
-    }
-
-    private void print(String s) {
-        System.out.println("[KeyExchangeReceiptTP] " + s);
     }
 
     public String transactionFamilyName() {
@@ -146,6 +141,10 @@ public class KeyExReceiptHandler implements TransactionHandler {
 
         ByteString bsEntry = entries.get(address);
         return new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
+    }
+
+    private void print(String message) {
+        System.out.println("[KeyExchangeReceiptTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }
 

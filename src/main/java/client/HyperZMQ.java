@@ -1,37 +1,58 @@
 package client;
 
+import blockchain.BlockchainHelper;
+import blockchain.EventHandler;
+import blockchain.IAllChatReceiver;
+import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import contracts.Contract;
+import contracts.ContractReceipt;
 import contracts.IContractProcessingCallback;
 import contracts.IContractProcessor;
-import contracts.ContractReceipt;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
-import jdk.jshell.execution.Util;
-import joingroup.JoinGroupRequest;
+import groups.Envelope;
+import groups.IGroupCallback;
+import groups.IGroupVoteReceiver;
+import java.nio.charset.StandardCharsets;
 import joingroup.IJoinGroupStatusCallback;
+import joingroup.JoinRequest;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
-import org.bitcoinj.core.Utils;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import sawtooth.sdk.protobuf.Transaction;
-import sawtooth.sdk.signing.*;
-import subgrouping.ISubgroupSelector;
-import voting.*;
+import sawtooth.sdk.signing.Secp256k1Context;
+import sawtooth.sdk.signing.Secp256k1PrivateKey;
+import sawtooth.sdk.signing.Signer;
+import voting.JoinRequestType;
+import voting.Vote;
+import voting.VotingMatter;
 import zmq.io.mechanism.curve.Curve;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static client.Envelope.*;
+import static groups.Envelope.MESSAGETYPE_CONTRACT;
+import static groups.Envelope.MESSAGETYPE_CONTRACT_RECEIPT;
+import static groups.Envelope.MESSAGETYPE_TEXT;
+import static groups.Envelope.MESSAGETYPE_VOTE;
+import static groups.Envelope.MESSAGETYPE_VOTING_MATTER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class HyperZMQ implements AutoCloseable {
@@ -42,7 +63,7 @@ public class HyperZMQ implements AutoCloseable {
     private final List<IContractProcessor> contractProcessors = new ArrayList<>();
     private final Map<String, List<IGroupCallback>> textmessageCallbacks = new HashMap<>();
     private final Map<String, IContractProcessingCallback> contractCallbacks = new HashMap<>(); // key is the contractID
-    private final BlockchainHelper blockchainHelper;
+    final BlockchainHelper blockchainHelper;
     private final ZContext zContext = new ZContext();
 
     private final VoteManager voteManager;
@@ -50,9 +71,7 @@ public class HyperZMQ implements AutoCloseable {
     // Outlet for messages of Vote type received in groups
     private IGroupVoteReceiver groupVoteReceiver = null;
 
-    // if set, voting results only count if all required voters did really vote
-    // by default, all votes coming in before the timeout are evaluated
-    private boolean enforceCompleteVote = false;
+    private IAllChatReceiver allChatReceiver = null;
 
     // if this is set, passes all contract messages received in a group to all callbacks that are registered
     // also invokes the group callback with ContractReceipt additionally to the ReceiptCallback
@@ -73,20 +92,18 @@ public class HyperZMQ implements AutoCloseable {
 
         this.crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
         this.eventHandler = new EventHandler(this);
-        this.blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
-
     }
 
     /**
      * Using the default keystore file path
      */
     public HyperZMQ(String id, String keystorePassword, boolean createNewStore) {
-
         this.clientID = id;
         this.crypto = new Crypto(this, keystorePassword.toCharArray(), createNewStore);
         this.eventHandler = new EventHandler(this);
-        this.blockchainHelper = new BlockchainHelper(this, crypto.getSigner());
+        this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
     }
 
@@ -209,12 +226,13 @@ public class HyperZMQ implements AutoCloseable {
         return crypto.removeKeypair(alias);
     }
 
-    public boolean groupIsAvailable(String groupName) {
+    public boolean isGroupAvailable(String groupName) {
         return crypto.hasKeyForGroup(groupName);
     }
 
     /**
      * Query the given address of the global state.
+     * DEPRECATED - USE ZMQ VARIANT INSTEAD
      *
      * @param addr address to query (70 hex chars)
      * @return response or null if error
@@ -509,13 +527,13 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     /**
-     * Receives the message from the client.EventHandler. The message is not decrypted yet.
+     * Receives the message from the blockchain.EventHandler. The message is not decrypted yet.
      * TODO synchronized not needed anymore?
      *
      * @param group            group name
      * @param encryptedMessage encrypted message
      */
-    synchronized void newEventReceived(String group, String encryptedMessage) {
+    public synchronized void newEventReceived(String group, String encryptedMessage) {
         String plainMessage;
         try {
             plainMessage = crypto.decrypt(encryptedMessage, group);
@@ -528,7 +546,6 @@ public class HyperZMQ implements AutoCloseable {
             return;
         }
         Envelope envelope = new Gson().fromJson(plainMessage, Envelope.class);
-
         // TODO PROCESS NEW MESSAGE TYPES HERE
         switch (envelope.getType()) {
             case MESSAGETYPE_CONTRACT: {
@@ -552,9 +569,9 @@ public class HyperZMQ implements AutoCloseable {
             case MESSAGETYPE_VOTING_MATTER: {
                 handleVotingMatter(group, envelope);
                 // TODO maybe not do this?
-                if (passthroughAll) {
+                /*if (passthroughAll) {
                     handleTextMessage(group, envelope);
-                }
+                } */
                 break;
             }
             case MESSAGETYPE_VOTE: {
@@ -673,7 +690,7 @@ public class HyperZMQ implements AutoCloseable {
         }
     }
 
-    private byte[] encryptEnvelope(String group, Envelope envelope) {
+    byte[] encryptEnvelope(String group, Envelope envelope) {
         // Create the payload in CSV format
         // The group stays in clearText so clients attempting to decrypt can know if they can without trial and error
         StringBuilder msgBuilder = new StringBuilder();
@@ -693,7 +710,7 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     void print(String message) {
-        System.out.println("[" + Thread.currentThread().getId() + "]" + "[" + clientID + "]  " + message);
+        System.out.println("[" + Thread.currentThread().getId() + "] [HyperZMQ]" + "[" + clientID + "]  " + message);
     }
 
     public void setValidatorURL(String url) {
@@ -754,177 +771,184 @@ public class HyperZMQ implements AutoCloseable {
     public void setPrivateKey(String privateKeyHex) {
         Objects.requireNonNull(privateKeyHex);
         crypto.setPrivateKey(new Secp256k1PrivateKey(SawtoothUtils.hexDecode(privateKeyHex)));
-        blockchainHelper.setSigner(crypto.getSigner());
     }
 
     public Signer getSawtoothSigner() {
         return crypto.getSigner();
     }
 
-    public void tryJoinGroup(String groupName, @Nullable IJoinGroupStatusCallback callback) {
+    public void tryJoinGroup2(@Nonnull String groupName, @Nonnull String address, @Nonnull int port, @Nullable Map<String, String> additionalInfo,
+                              @Nullable IJoinGroupStatusCallback callback, @Nullable String contactPublicKey) {
         Objects.requireNonNull(groupName);
-        // Get the client responsible for the group by checking the entry
-        List<String> members = getGroupMembers(groupName);
-        if (members.isEmpty()) {
-            // TODO
-            print(groupName + " does not have any members. Try creating the group.");
-            return;
+        String realContactKey = contactPublicKey;
+        if (realContactKey == null) {
+            // If no contact is given, get the client responsible for the group by checking the entry
+            List<String> members = getGroupMembers(groupName);
+            if (members.isEmpty()) {
+                notifyCallback(IJoinGroupStatusCallback.NO_CONTACT_FOUND,
+                        "No contact could be found from the blockchain", callback);
+                print(groupName + " does not have any members. Try creating the group.");
+                return;
+            }
+
+            realContactKey = members.get(members.size() - 1); // Last one to join the group is responsible
         }
+        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, realContactKey, callback);
 
-        String contactPubkey = members.get(members.size() - 1); // Last one to join the group is responsible
-        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, contactPubkey, callback);
-
-        // TODO get voting args from outside
-        String address = "localhost";
-        int port = 4444;
-
-        JoinGroupRequest request = new JoinGroupRequest(getSawtoothPublicKey(),
-                contactPubkey,
+        JoinRequest request = new JoinRequest(getSawtoothPublicKey(),
+                realContactKey,
+                JoinRequestType.GROUP,
                 groupName,
-                Arrays.asList("hallo", "arg2"), address, port);
+                additionalInfo,
+                address,
+                port);
 
-
-        Transaction t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
+        Transaction transaction = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
                 "0.1",
                 request.toString().getBytes(UTF_8),
                 null);
 
-        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(transaction));
         notifyCallback(IJoinGroupStatusCallback.REQUEST_SENT, request.toString(), callback);
+    }
 
-        // Now wait for the contact to perform key exchange
-        // TODO
-        FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
-                getSawtoothSigner(), contactPubkey, address, port, true));
-        notifyCallback(IJoinGroupStatusCallback.STARTING_DIFFIE_HELLMAN, null, callback);
-        new Thread(server).start();
+    public void waitForResponse(String address, int port, String realContactKey) {
+        Thread t = new Thread(() -> {
+            DHKeyExchange exchange = new DHKeyExchange(clientID,
+                    getSawtoothSigner(), realContactKey, address, port, true);
+            try {
+                EncryptedStream stream = exchange.call();
+                String s = stream.readLine();
+                System.out.println("Received from encrypted stream: " + s);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-        try (EncryptedStream stream = server.get(15000, TimeUnit.MILLISECONDS)) {
-            notifyCallback(IJoinGroupStatusCallback.GETTING_KEY, null, callback);
-            String key = stream.readLine();
-            notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, key, callback);
-            addGroup(request.getGroupName(), key);
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            //TODO retry?
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
+        t.start();
+    }
+
+    /**
+     * @see HyperZMQ#tryJoinGroup(String, String, int, Map, IJoinGroupStatusCallback, String)
+     */
+    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, @Nonnull int port,
+                             @Nullable Map<String, String> additionalInfo, @Nullable IJoinGroupStatusCallback callback) {
+        tryJoinGroup(groupName, address, port, additionalInfo, callback, null);
+    }
+
+    /**
+     * @param groupName
+     * @param address
+     * @param port
+     * @param additionalInfo
+     * @param callback
+     * @param contactPublicKey
+     */
+    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, @Nonnull int port,
+                             @Nullable Map<String, String> additionalInfo,
+                             @Nullable IJoinGroupStatusCallback callback, @Nullable String contactPublicKey) {
+        Objects.requireNonNull(groupName);
+        Thread t = new Thread(() -> {
+            String realContactKey = contactPublicKey;
+            if (realContactKey == null) {
+                // If no contact is given, get the client responsible for the group by checking the entry
+                List<String> members = getGroupMembers(groupName);
+                if (members.isEmpty()) {
+                    notifyCallback(IJoinGroupStatusCallback.NO_CONTACT_FOUND,
+                            "No contact could be found from the blockchain", callback);
+                    print(groupName + " does not have any members. Try creating the group.");
+                    return;
+                }
+
+                realContactKey = members.get(members.size() - 1); // Last one to join the group is responsible
+            }
+            notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, realContactKey, callback);
+
+            JoinRequest request = new JoinRequest(getSawtoothPublicKey(),
+                    realContactKey,
+                    JoinRequestType.GROUP,
+                    groupName,
+                    additionalInfo,
+                    address,
+                    port);
+
+            Transaction transaction = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
+                    "0.1",
+                    request.toString().getBytes(UTF_8),
+                    null);
+
+            blockchainHelper.buildAndSendBatch(Collections.singletonList(transaction));
+            notifyCallback(IJoinGroupStatusCallback.REQUEST_SENT, request.toString(), callback);
+
+            // Now wait for the contact to perform key exchange
+            FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
+                    getSawtoothSigner(), realContactKey, address, port, true));
+            notifyCallback(IJoinGroupStatusCallback.STARTING_DIFFIE_HELLMAN, null, callback);
+            new Thread(server).start();
+            print("TryJoinGroup - Waiting for response");
+            try (EncryptedStream stream = server.get(25000, TimeUnit.MILLISECONDS)) {
+                notifyCallback(IJoinGroupStatusCallback.GETTING_KEY, null, callback);
+                String received = stream.readLine();
+                if (received == null) {
+                    notifyCallback(IJoinGroupStatusCallback.EMPTY_RESPONSE, callback);
+                } else if (received.equals("Vote denied")) {
+                    notifyCallback(IJoinGroupStatusCallback.VOTE_DENIED, callback);
+                } else {
+                    notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, received, callback);
+                    addGroup(request.getGroupName(), received);
+                }
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                notifyCallback(IJoinGroupStatusCallback.TIMEOUT, callback);
+                //e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        t.start();
+    }
+
+    /**
+     * Send a message in the AllChat, which is broadcasted to all participants in the blockchain
+     *
+     * @param message message
+     */
+    public void sendAllChat(String message) {
+        Transaction t = blockchainHelper.buildTransaction("AllChat", "0.1", message.getBytes(UTF_8), null);
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
     /**
      * Encapsulate the call on the callback that is possibly null.
      * If it is null this method does nothing
      *
-     * @param message
-     * @param callback
+     * @param message  message
+     * @param callback callback
      */
     private void notifyCallback(int code, @Nullable String message, @Nullable IJoinGroupStatusCallback callback) {
         if (callback != null)
             callback.joinGroupStatusCallback(code, message);
     }
 
-    // TODO add callback
-    public void handleJoinGroupRequest(String serializedJoinRequest) {
-        JoinGroupRequest request = SawtoothUtils.deserializeMessage(serializedJoinRequest, JoinGroupRequest.class);
-        if (request == null) {
-            return;
-        }
-        print("Received JoinGroupRequest: " + request.toString());
-
-        // Check if we are responsible for the request
-        if (!request.getContactPublicKey().equals(getSawtoothPublicKey())) {
-            print("This client is not responsible for the request");
-            return;
-        }
-
-        // Check if we can access the requested key beforehand
-        Objects.requireNonNull(getKeyForGroup(request.getGroupName()), "Client does not have the key that was requested!");
-
-        // start voting
-        Objects.requireNonNull(votingProcessGroup, "No voting process registered to execute. Cancelling JoinGroupRequest");
-        print("Starting vote...");
-        List<String> groupMembers = getGroupMembers(request.getGroupName());
-        // Let self vote 7
-
-        if (groupMembers.size() > votingParticipantsThreshold) {
-            if (subgroupSelector == null) {
-                throw new IllegalStateException("No SubGroupSelector available but is required.");
-            }
-            groupMembers = subgroupSelector.selectSubgroup(groupMembers, votingParticipantsThreshold);
-        }
-
-        VotingMatter votingMatter = new VotingMatter(request.getApplicantPublicKey(),
-                getSawtoothPublicKey(),
-                VotingMatterType.JOIN_GROUP,
-                request.getGroupName(),
-                groupMembers);
-
-        print("Requiring votes from:" + groupMembers.toString());
-        VotingResult result = votingProcessGroup.vote(votingMatter, groupMembers);
-
-        // Evaluate the result
-        boolean approved = false;
-        if (result.getVotesSize() < groupMembers.size() && enforceCompleteVote) {
-            print("Not enough votes received while enforceCompleteVote is on. Failing the vote");
-        } else {
-            // Count the votes
-            int yes = 0, no = 0;
-            for (Vote v : result.getVotes()) {
-                // Verify the vote to make it count
-                if (!groupMembers.contains(v.getPublicKey())) {
-                    print("VotingResult contained vote of unrequested entity: " + v.toString());
-                    continue;
-                }
-                boolean verified = SawtoothUtils.verify(v.getSignablePayload(), v.getSignature(), v.getPublicKey());
-                if (verified) {
-                    if (v.isApproval())
-                        yes++;
-                    else
-                        no++;
-                } else {
-                    print("Signature of vote is invalid:" + v.toString());
-                }
-            }
-
-            approved = (yes > no);
-        }
-
-        // Communicate the result to the applicant
-        FutureTask<EncryptedStream> client = new FutureTask<EncryptedStream>(new DHKeyExchange(clientID,
-                getSawtoothSigner(), request.getApplicantPublicKey(), request.getAddress(), request.getPort(), false));
-        print("Starting DHKE");
-        new Thread(client).start();
-
-        try (EncryptedStream stream = client.get(3000, TimeUnit.MILLISECONDS)) {
-            if (approved) {
-                print("Vote was approved - Sending group key");
-                String groupKey = getKeyForGroup(request.getGroupName());
-                stream.write(groupKey);
-                print("Key sent");
-            } else {
-                print("Vote failed - sending deny");
-                stream.write("no"); // TODO
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+    /**
+     * @see HyperZMQ#notifyCallback(int, String, IJoinGroupStatusCallback)
+     */
+    private void notifyCallback(int code, @Nullable IJoinGroupStatusCallback callback) {
+        notifyCallback(code, null, callback);
     }
 
     public void sendVotingMatterInGroup(VotingMatter votingMatter) {
         Objects.requireNonNull(votingMatter);
-        if (!groupIsAvailable(votingMatter.getGroup())) {
+        if (!isGroupAvailable(votingMatter.getJoinRequest().getGroupName())) {
             throw new IllegalArgumentException("The group specified in the VotingMatter is not available on this client!");
         }
 
         Envelope envelope = new Envelope(this.clientID, MESSAGETYPE_VOTING_MATTER, votingMatter.toString());
         Transaction t;
-        byte[] payload = encryptEnvelope(votingMatter.getGroup(), envelope);
+        byte[] payload = encryptEnvelope(votingMatter.getJoinRequest().getGroupName(), envelope);
         t = blockchainHelper.buildTransaction(BlockchainHelper.CSVSTRINGS_FAMILY,
                 "0.1",
                 payload,
@@ -934,16 +958,19 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     private void handleVotingMatter(String group, Envelope envelope) {
+        print("HandleVotingMatter: " + envelope.toString());
         VotingMatter matter;
         try {
             matter = new Gson().fromJson(envelope.getRawMessage(), VotingMatter.class);
         } catch (JsonSyntaxException e) {
             throw new IllegalArgumentException(e);
         }
-        /*} else {
-            print("Received VotingMatter but this clients vote is not required.");
-            return;
-        } */
+
+        if (matter.getDesiredVoters().contains(getSawtoothPublicKey())) {
+            voteManager.addVoteRequired(matter);
+        } else {
+            print("This client is not required to vote on the matter.");
+        }
     }
 
     public VoteManager getVoteManager() {
@@ -954,11 +981,11 @@ public class HyperZMQ implements AutoCloseable {
         this.groupVoteReceiver = groupVoteReceiver;
     }
 
-    public boolean isEnforceCompleteVote() {
-        return enforceCompleteVote;
+    public IAllChatReceiver getAllChatReceiver() {
+        return allChatReceiver;
     }
 
-    public void setEnforceCompleteVote(boolean enforceCompleteVote) {
-        this.enforceCompleteVote = enforceCompleteVote;
+    public void setAllChatReceiver(IAllChatReceiver allChatReceiver) {
+        this.allChatReceiver = allChatReceiver;
     }
 }

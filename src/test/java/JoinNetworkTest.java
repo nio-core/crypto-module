@@ -1,6 +1,12 @@
 import client.HyperZMQ;
-import client.JNManager;
+import client.NetworkJoinManager;
+import client.VoteManager;
+import java.util.Collections;
 import org.junit.Test;
+import subgrouping.RandomSubgroupSelector;
+import voting.GroupInternVotingProcess;
+import voting.SimpleMajorityEvaluator;
+import voting.YesVoteStrategy;
 
 public class JoinNetworkTest {
 
@@ -8,17 +14,25 @@ public class JoinNetworkTest {
 
     @Test
     public void testJoining() throws InterruptedException {
-        HyperZMQ join = new HyperZMQ("joinClient", "password", true);
-        HyperZMQ member = new HyperZMQ("memberClient", "password", true);
-        String address = "tcp://127.0.0.1:5555";
-        JNManager joinClient = new JNManager(join, address);
-        JNManager memberClient = new JNManager(member, address);
+        String joinNetworkSubSocketAddr = "tcp://127.0.0.1:5555";
 
-        Thread.sleep(1000);
+        HyperZMQ join = new HyperZMQ("joinClient", "password", true);
+        NetworkJoinManager joinManagerAppl = new NetworkJoinManager(join, joinNetworkSubSocketAddr);
+
+        HyperZMQ member = new HyperZMQ("memberClient", "password", true);
+        NetworkJoinManager joinManagerMember = new NetworkJoinManager(member, joinNetworkSubSocketAddr);
+
+        VoteManager voteManager = new VoteManager(member);
+        voteManager.setVotingProcessNetwork(new GroupInternVotingProcess(member, 50));
+        voteManager.setVotingStrategyNetwork(new YesVoteStrategy(50));
+        voteManager.setSubgroupSelector(new RandomSubgroupSelector(), 5);
+        voteManager.setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, member.getClientID()));
+
+        Thread.sleep(2000);
 
         //memberClient.handleJoinNetwork(joinClient.getRequest());
         //Thread.sleep(300);
-        joinClient.sendJoinRequest(address);
+        joinManagerAppl.tryJoinNetwork("localhost", 5555, Collections.emptyMap());
 
         while (true) {
         }

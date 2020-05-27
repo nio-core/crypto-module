@@ -1,4 +1,4 @@
-package client;
+package blockchain;
 
 public class ValidatorAddress {
 

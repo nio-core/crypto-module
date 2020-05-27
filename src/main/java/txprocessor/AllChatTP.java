@@ -3,8 +3,7 @@ package txprocessor;
 import blockchain.ValidatorAddress;
 import sawtooth.sdk.processor.TransactionProcessor;
 
-public class KeyExReceiptTP {
-
+public class AllChatTP {
     public static void main(String[] args) {
         String url = ValidatorAddress.VALIDATOR_URL_DEFAULT;
         if (args != null && args.length > 0) {
@@ -13,9 +12,8 @@ public class KeyExReceiptTP {
         // Connect the transaction processor to the validator
         TransactionProcessor tp = new TransactionProcessor(url);
         // The handler implements the actual chaincode
-        tp.addHandler(new KeyExReceiptHandler());
+        tp.addHandler(new AllChatHandler());
         Thread t = new Thread(tp);
         t.start();
     }
-
 }

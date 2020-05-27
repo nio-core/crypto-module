@@ -1,5 +1,7 @@
 package voting;
 
+import com.google.gson.Gson;
+
 import java.util.List;
 
 /**
@@ -17,13 +19,11 @@ public class VotingResult {
 
     // Make it possible to aggregate the Votes over time
     public void addVote(Vote vote) {
-        System.out.println("checking vote: " + vote.toString());
         if (votes.stream().noneMatch(v ->
                 v.getSignablePayload().equals(vote.getSignablePayload()) && v.getSignature().equals(vote.getSignature()))) {
-            System.out.println("adding vote");
+            //System.out.println("New vote from " + vote.getPublicKey() + " and approval=" + vote.isApproval() + " added to result");
             votes.add(vote);
         }
-
     }
 
     public int getVotesSize() {
@@ -36,5 +36,10 @@ public class VotingResult {
 
     public List<Vote> getVotes() {
         return votes;
+    }
+
+    @Override
+    public String toString() {
+        return new Gson().toJson(this);
     }
 }

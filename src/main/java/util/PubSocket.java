@@ -29,7 +29,7 @@ public class PubSocket {
         }
         String toSend = topic == null ? message :
                 (topic + TOPIC_SUFFIX + message);
-        System.out.println("Sending message: " + toSend);
+        //System.out.println("Sending message: " + toSend);
 
         boolean ret = socket.send(toSend);
         socket.disconnect(address);
