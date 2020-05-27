@@ -29,7 +29,7 @@ public class CSVStringsHandler implements TransactionHandler {
     CSVStringsHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
-        print("Starting TransactionProcessor with namespace '" + namespace + "'");
+        print("Starting CSVStringsTP with namespace '" + namespace + "'");
     }
 
     @Override
@@ -160,10 +160,6 @@ public class CSVStringsHandler implements TransactionHandler {
         } catch (InternalError internalError) {
             internalError.printStackTrace();
         }
-    }
-
-    private void handleJoinRequest(TpProcessRequest tpProcessRequest, Context context, JoinRequest request) {
-
     }
 
     void print(String message) {

@@ -47,7 +47,7 @@ public class BlockchainHelper {
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
     private boolean doPrint = true;
 
-    public BlockchainHelper(HyperZMQ hyperZMQ, Signer signer) {
+    public BlockchainHelper(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
         baseRestAPIUrl = ValidatorAddress.REST_URL_DEFAULT;
 
@@ -57,6 +57,10 @@ public class BlockchainHelper {
 
     public void setBaseRestAPIUrl(String baseRestAPIUrl) {
         this.baseRestAPIUrl = baseRestAPIUrl;
+    }
+
+    public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload) {
+        return buildTransaction(transactionFamily, txFamVersion, payload, null);
     }
 
     public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload, String outputAddr) {

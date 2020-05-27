@@ -21,7 +21,7 @@ public class VotingResult {
     public void addVote(Vote vote) {
         if (votes.stream().noneMatch(v ->
                 v.getSignablePayload().equals(vote.getSignablePayload()) && v.getSignature().equals(vote.getSignature()))) {
-            System.out.println("New vote from " + vote.getPublicKey() + " and approval=" + vote.isApproval() + " added to result");
+            //System.out.println("New vote from " + vote.getPublicKey() + " and approval=" + vote.isApproval() + " added to result");
             votes.add(vote);
         }
     }

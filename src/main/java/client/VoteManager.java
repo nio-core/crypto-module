@@ -69,7 +69,7 @@ public class VoteManager {
      * IVotingStrategy that is set at the time the matter is handled
      */
     private void handleVoteRequiredLoop() {
-        print("Starting VoteRequiredLoop...");
+        //print("Starting VoteRequiredLoop...");
         while (runVoteRequiredHandler.get()) {
             VotingMatter matter = null;
             try {
@@ -120,7 +120,7 @@ public class VoteManager {
      * First the IVotingProcess is executed. Afterwards the IVotingEvaluator is executed
      */
     private void handleVotingProcessLoop() {
-        print("Starting VoteProcessLoop...");
+        //print("Starting VoteProcessLoop...");
         while (runVotingProcessHandler.get()) {
             JoinRequest joinRequest = null;
             try {
@@ -160,9 +160,9 @@ public class VoteManager {
                     VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, joinRequest);
                     // TODO add timeout to process - if reached reject the request?
                     VotingResult result = process.vote(votingMatter);
-                    print("VoteProcess finished with result: " + result.toString());
+                    //print("VoteProcess finished with result: " + result.toString());
                     boolean isApproved = voteEvaluator.evaluateVotes(result);
-                    print("Votes were evaluated with result: " + isApproved);
+                    //print("Votes were evaluated with result: " + isApproved);
                     ImmutablePair<VotingResult, Boolean> resultPair = new ImmutablePair<>(result, isApproved);
                     try {
                         finishedVotes.put(resultPair);
@@ -176,7 +176,7 @@ public class VoteManager {
     }
 
     private void handleFinishedVotes() {
-        print("Starting VoteFinisherLoop...");
+        //print("Starting VoteFinisherLoop...");
         while (runVotingFinisher.get()) {
             ImmutablePair<VotingResult, Boolean> resultPair = null;
             try {

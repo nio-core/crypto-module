@@ -61,175 +61,52 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
     */
 
     @Test
-    public void test01() throws InterruptedException {
-        // Prepare groups
-        String groupName = "testgroup";
-        HyperZMQ member1 = new HyperZMQ("member1", "password", true);
-        member1.setPrivateKey(PRIVATE_MEMBER_1);
-        member1.createGroup(groupName);
-
-        Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
-
-        // Prepare Voting behavior - member1 should be responsible for the voting
-        member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        member1.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(member1, 50));
-        member1.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member1"));
-
-        // Start the join process
-        HyperZMQ applicant = new HyperZMQ("applicant", "password", true);
-        applicant.setPrivateKey(PRIVATE_APPLICANT);
-
-        Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
-        applicant.tryJoinGroup(groupName, "localhost", 5555, null, this);
-
-        Thread.sleep(15000);
-        if (receivedKey == null) {
-            fail("Received no key in time");
-        }
-        assertEquals("Received the correct key for the group", member1.getKeyForGroup(groupName), receivedKey);
-    }
-
-    @Test
     public void test() throws InterruptedException {
         // Prepare groups
         final String groupName = "testgroup";
 
-        Thread mem1 = new Thread(() -> {
-            HyperZMQ member1 = new HyperZMQ("member1", "password", true);
-            member1.setPrivateKey(PRIVATE_MEMBER_1);
-            member1.createGroup(groupName);
-            groupKey = member1.getKeyForGroup(groupName);
-
-            KeyExchangeReceipt receipt = new KeyExchangeReceipt(member1.getSawtoothPublicKey(),
-                    PUBLIC_MEMBER_2, // shortcut
-                    ReceiptType.JOIN_GROUP,
-                    groupName,
-                    System.currentTimeMillis());
-            receipt.setSignature(member1.sign(receipt.getSignablePayload()));
-            member1.sendKeyExchangeReceipt(receipt);
-
-            member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-
-        });
-        mem1.start();
-
-        Thread.sleep(1000);
-
-        Thread mem2 = new Thread(() -> {
-            HyperZMQ member2 = new HyperZMQ("member2", "password", true);
-            member2.setPrivateKey(PRIVATE_MEMBER_2);
-            // This does not recreate a receipt, as it is not possible in production TODO
-            member2.addGroup(groupName, groupKey);
-
-            // Prepare Voting behavior - member2 should be responsible for the voting
-            member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-            member2.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(member2, 50));
-            member2.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member2"));
-        });
-        mem2.start();
-
-        Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
-
-        // Start the join process
-        Thread applThread = new Thread(() -> {
-            HyperZMQ applicant = new HyperZMQ("applicant", "password", true);
-            applicant.setPrivateKey(PRIVATE_APPLICANT);
-            try {
-                Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            applicant.tryJoinGroup(groupName, "localhost", 5555, null, this);
-        });
-        applThread.start();
-
-
-        Thread.sleep(15000);
-        if (receivedKey == null) {
-            fail("Received no key in time");
-        }
-        assertEquals("Received the correct key for the group", groupKey, receivedKey);
-
-    }
-
-    @Test
-    public void testAddRequestManually() throws InterruptedException {
-        String groupName = "testgroup2";
-
         HyperZMQ member1 = new HyperZMQ("member1", "password", true);
         member1.setPrivateKey(PRIVATE_MEMBER_1);
         member1.createGroup(groupName);
-
-        member1.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member1"));
-        member1.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector(), 5);
-        member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
-        member1.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(member1, 300));
-
-        HyperZMQ member2 = new HyperZMQ("member2", "password", true);
-        member2.setPrivateKey(PRIVATE_MEMBER_2);
-        member2.addGroup(groupName, member1.getKeyForGroup(groupName));
-        member2.getVoteManager().setVotingStrategyGroup(new NoVoteStrategy(50));
+        groupKey = member1.getKeyForGroup(groupName);
 
         KeyExchangeReceipt receipt = new KeyExchangeReceipt(member1.getSawtoothPublicKey(),
-                member2.getSawtoothPublicKey(),
+                PUBLIC_MEMBER_2, // shortcut
                 ReceiptType.JOIN_GROUP,
                 groupName,
                 System.currentTimeMillis());
         receipt.setSignature(member1.sign(receipt.getSignablePayload()));
         member1.sendKeyExchangeReceipt(receipt);
 
+        member1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+
         Thread.sleep(1000);
 
-        JoinRequest joinRequest = new JoinRequest(PUBLIC_APPLICANT,
-                member1.getSawtoothPublicKey(),
-                JoinRequestType.GROUP,
-                groupName,
-                null,
-                "localhost",
-                5555);
+        HyperZMQ member2 = new HyperZMQ("member2", "password", true);
+        member2.setPrivateKey(PRIVATE_MEMBER_2);
+        // This does not recreate a receipt, as it is not possible in production TODO
+        member2.addGroup(groupName, member1.getKeyForGroup(groupName));
 
-        // Mock somebody waiting for the result
-        Context context = new Secp256k1Context();
-        PrivateKey privateKey = new Secp256k1PrivateKey(SawtoothUtils.hexDecode(PRIVATE_APPLICANT));
-        Signer signer = new Signer(context, privateKey);
-        DHKeyExchange exchange = new DHKeyExchange("joiner", signer, member1.getSawtoothPublicKey(), "localhost", 5555, true);
-        FutureTask<EncryptedStream> encryptedStreamFuture = new FutureTask<EncryptedStream>(exchange);
-        new Thread(encryptedStreamFuture).start();
-        ///////////////////////////////////////////////
+        // Prepare Voting behavior - member2 should be responsible for the voting
+        member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        member2.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(member2, 50));
+        member2.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member2"));
 
-        member1.getVoteManager().addJoinRequest(joinRequest);
+        Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 
-        try {
-            EncryptedStream stream = encryptedStreamFuture.get(10000, TimeUnit.MILLISECONDS);
-            System.out.println("Applicant receives: " + stream.readLine());
-            System.out.println("The key requested was: " + member1.getKeyForGroup(groupName));
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            e.printStackTrace();
+        // Start the join process
+        HyperZMQ applicant = new HyperZMQ("applicant", "password", true);
+        applicant.setPrivateKey(PRIVATE_APPLICANT);
+
+        Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
+
+        applicant.tryJoinGroup(groupName, "localhost", 5555, null, this, PUBLIC_MEMBER_2);
+
+        Thread.sleep(5000);
+        if (receivedKey == null) {
+            fail("Received no key in time");
         }
-
-        /*
-        Thread.sleep(2000);
-        Thread join = new Thread(() -> {
-            HyperZMQ joiner = new HyperZMQ("member2", "password", true);
-            joiner.setPrivateKey(PRIVATE_APPLICANT);
-            joiner.tryJoinGroup(groupName, "localhost", 5555, Collections.emptyMap(), null);
-        });
-        join.start();
-  */
-
-        /*VotingMatter votingMatter = new VotingMatter(member1.getSawtoothPublicKey(),
-                Arrays.asList(member1.getSawtoothPublicKey(), member2.getSawtoothPublicKey()),
-                joinRequest);
-
-        member1.sendVotingMatterInGroup(votingMatter);
-        Thread.sleep(200);
-        //member1.getVoteManager().addJoinRequest(joinRequest);
-*/
-        Thread.sleep(15000);
+        assertEquals("Received the correct key for the group", groupKey, receivedKey);
     }
 
     @Override
@@ -237,13 +114,21 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         switch (code) {
             case FOUND_CONTACT:
                 System.out.println("[TEST] contact public key: " + info);
+                break;
             case REQUEST_SENT:
             case STARTING_DIFFIE_HELLMAN:
             case GETTING_KEY:
                 break;
             case KEY_RECEIVED:
+                System.out.println("[TEST] received key: " + info);
                 receivedKey = info;
-
+                break;
+            case TIMEOUT:
+            case VOTE_DENIED:
+            case EMPTY_RESPONSE:
+                break;
+            default:
+                break;
         }
     }
 }

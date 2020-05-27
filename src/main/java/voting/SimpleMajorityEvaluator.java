@@ -44,7 +44,7 @@ public class SimpleMajorityEvaluator implements IVoteEvaluator {
                     print("Signature of vote is invalid:" + v.toString());
                 }
             }
-
+            print("Vote result: YES-" + yes + " NO-" + no);
             approved = (yes > no);
         }
 
@@ -53,6 +53,6 @@ public class SimpleMajorityEvaluator implements IVoteEvaluator {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[" + Thread.currentThread().getId() + "][SimpleMajorityEvaluator][" + clientID + "]   " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [SimpleMajorityEvaluator][" + clientID + "]   " + message);
     }
 }
