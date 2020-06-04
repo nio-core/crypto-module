@@ -98,7 +98,6 @@ public class EventHandler implements AutoCloseable {
                                 // Check whether the event is a new encrypted message or a JoinGroup request
                                 Event.Attribute attr = e.getAttributes(0);
                                 if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
-                                    //hyperzmq.handleJoinGroupRequest(e.getData().toStringUtf8());
                                     JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
                                     if (request != null) {
                                         print("Received JoinGroupRequest: " + request.toString());
@@ -117,9 +116,7 @@ public class EventHandler implements AutoCloseable {
                                         hyperzmq.getVoteManager().addJoinRequest(request);
                                         continue;
                                     }
-
                                 }
-
                                 //-----------------------------------------------------------------------------------
                                 //  Handle Group Messages (Normal message, Contract, VotingMatter, Vote)
                                 //  Filter for VotingMatter and Vote to put those in the corresponding queues
@@ -139,7 +136,6 @@ public class EventHandler implements AutoCloseable {
                                 String encMessage = parts[1];
                                 //print("Group: " + group);
                                 //print("Encrypted Message: " + encMessage);
-
                                 hyperzmq.newEventReceived(group, encMessage);
                             }
                         }

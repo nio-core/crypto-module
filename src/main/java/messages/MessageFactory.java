@@ -19,9 +19,13 @@ import java.util.Map;
  */
 public class MessageFactory {
 
-    private final Signer signer;
+    private Signer signer;
 
     public MessageFactory(Signer signer) {
+        this.signer = signer;
+    }
+
+    public void setSigner(Signer signer) {
         this.signer = signer;
     }
 

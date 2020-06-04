@@ -54,9 +54,9 @@ public class AsyncSubSocket implements Runnable {
     public void run() {
         print("Starting...");
         while (doRun) {
-            //print("Receive...");
+            print("Receive...");
             String s = socket.recvStr();
-            //print(s);
+            print(s);
             if (s != null && !s.isEmpty()) {
                 print(s);
                 callback.newMessage(s.replaceFirst(this.topic + PubSocket.TOPIC_SUFFIX, ""), this.topic);
@@ -66,6 +66,6 @@ public class AsyncSubSocket implements Runnable {
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[AsyncSubSocket][" + topic + "][" + address + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [AsyncSubSocket][" + topic + "][" + address + "] " + message);
     }
 }

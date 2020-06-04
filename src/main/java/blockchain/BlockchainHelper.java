@@ -3,6 +3,8 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import keyexchange.KeyExchangeReceipt;
+import keyexchange.ReceiptType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.zeromq.ZContext;
@@ -19,6 +21,7 @@ import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
 import sawtooth.sdk.signing.Signer;
 
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,9 +32,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class BlockchainHelper {
 
@@ -59,11 +65,36 @@ public class BlockchainHelper {
         this.baseRestAPIUrl = baseRestAPIUrl;
     }
 
-    public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload) {
+    public Transaction allChatTransaction(byte[] bytes) {
+        return buildTransaction("AllChat", "0.1", bytes);
+    }
+
+    public Transaction csvStringsTransaction(byte[] payload) {
+        return csvStringsTransaction(payload, null);
+    }
+
+    public Transaction csvStringsTransaction(byte[] payload, @Nullable String outputAddress) {
+        Objects.requireNonNull(payload);
+        return buildTransaction(
+                BlockchainHelper.CSVSTRINGS_FAMILY,
+                "0.1",
+                payload,
+                outputAddress);
+    }
+
+    public Transaction keyExchangeReceiptTransaction(KeyExchangeReceipt keyExchangeReceipt) {
+        Objects.requireNonNull(keyExchangeReceipt);
+        return buildTransaction(BlockchainHelper.KEY_EXCHANGE_RECEIPT_FAMILY,
+                "0.1",
+                keyExchangeReceipt.toString().getBytes(UTF_8),
+                null);
+    }
+
+    private Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload) {
         return buildTransaction(transactionFamily, txFamVersion, payload, null);
     }
 
-    public Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload, String outputAddr) {
+    private Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload, String outputAddr) {
         Signer signer = hyperZMQ.getSawtoothSigner();
         if (signer == null) {
             throw new IllegalStateException("Signer for transaction could not be acquired!");

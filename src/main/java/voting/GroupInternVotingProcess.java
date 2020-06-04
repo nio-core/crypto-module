@@ -28,7 +28,7 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
     public VotingResult vote(VotingMatter votingMatter) {
         System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING");
         // Register callback to evaluate the votes
-        hyperZMQ.setGroupVoteReceiver(this);
+        hyperZMQ.addGroupVoteReceiver(this);
 
         // Send the voting matter to the group
         hyperZMQ.sendVotingMatterInGroup(votingMatter);
@@ -46,6 +46,7 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
                 e.printStackTrace();
             }
         }
+        hyperZMQ.removeGroupVoteReceiver(this);
         return result;
     }
 

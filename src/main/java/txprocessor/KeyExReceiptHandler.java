@@ -63,8 +63,6 @@ public class KeyExReceiptHandler implements TransactionHandler {
         }
 
         // Verify the member that shared a key is the one that submitted the KeyExchangeReceipt
-        // TODO undo comment around verifications
-
         if (!transactionRequest.getHeader().getSignerPublicKey().equals(receipt.getMemberPublicKey())) {
             print("Member and signer key are different!\nsigner: "
                     + transactionRequest.getHeader().getSignerPublicKey()
@@ -128,6 +126,28 @@ public class KeyExReceiptHandler implements TransactionHandler {
 
             if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
                 throw new InvalidTransactionException("Unable to update group member entry");
+            }
+
+            print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
+        }
+        else if (receipt.getReceiptType() == ReceiptType.JOIN_NETWORK)
+        {
+            print("Receipt is of JOIN_NETWORK type, updating members entry...");
+            String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, "AllChat");
+            print("Members address: " + groupAddress);
+            List<String> lEntries = readKeysFromAddress(groupAddress, state);
+            print("Entries at address before update: " + lEntries.toString());
+            print("Adding " + receipt.getApplicantPublicKey());
+            lEntries.add(receipt.getApplicantPublicKey());
+            lEntries.add(receipt.getMemberPublicKey()); // double check, gets removed here vvv if it is already in it
+            String strToWrite = lEntries.stream().distinct().reduce("", (s1, s2) -> {
+                if (s2.isEmpty()) return s1;
+                return s1 += s2 + ",";
+            });
+            strToWrite = strToWrite.substring(0, (strToWrite.length() - 1)); // remove trailing ','
+
+            if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
+                throw new InvalidTransactionException("Unable to update members entry");
             }
 
             print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());

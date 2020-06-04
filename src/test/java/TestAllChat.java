@@ -8,7 +8,7 @@ public class TestAllChat {
     public void test() throws InterruptedException {
         HyperZMQ client1 = new HyperZMQ("client1", "lsdfsd", true);
         HyperZMQ client2 = new HyperZMQ("client2", "lsdfsd", true);
-        client2.setAllChatReceiver((message, sender) -> {
+        client2.addAllChatReceiver((message, sender) -> {
             System.out.println("Received " + message + " from " + sender);
         });
 
