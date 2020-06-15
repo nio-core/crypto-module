@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import joingroup.JoinRequest;
+import messages.GroupMessage;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
 import subgrouping.ISubgroupSelector;
@@ -100,15 +101,18 @@ public class VoteManager {
                         statusCallback.newVoteCasted(matter, vote);
                     }
 
-                    // If the votingMatter was about joining network, sent the vote back in allchat
+                    // If the votingMatter was about joining network, send the vote back in allchat
                     if (matter.getJoinRequest().getType().equals(JoinRequestType.NETWORK)) {
                         hyperZMQ.sendAllChat(vote.toString());
                     } else if (matter.getJoinRequest().getType().equals(JoinRequestType.GROUP)) {
                         // If the votingMatter was about joining group, sent the vote back in the specified group
                         // TODO make this more generic?
                         Envelope env = new Envelope(hyperZMQ.getClientID(), MESSAGETYPE_VOTE, vote.toString());
+                        String payload = hyperZMQ.encryptEnvelope(matter.getJoinRequest().getGroupName(), env);
+                        // TODO write to chain behavior
+                        GroupMessage message = new GroupMessage(matter.getJoinRequest().getGroupName(), payload, false, true);
                         Transaction transaction = hyperZMQ.blockchainHelper.
-                                csvStringsTransaction(hyperZMQ.encryptEnvelope(matter.getJoinRequest().getGroupName(), env));
+                                csvStringsTransaction(message.getBytes());
 
                         hyperZMQ.blockchainHelper.buildAndSendBatch(Collections.singletonList(transaction));
                     } else {

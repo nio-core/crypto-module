@@ -24,7 +24,7 @@ public class JoinNetworkTest {
         // TODO: New flow: New clients start out with some static joinNetwork(addr, myKey, ...) that generates NetworkInformation which
         // TODO: can be used to create a HyperZMQ instance that connects to the network.
         // TODO: By default, the allchat is accessible and tryjoingroup can then be used
-        NetworkJoinManager joinManagerAppl = new NetworkJoinManager(join, joinNetworkSubSocketAddr, false);
+        NetworkJoinManager joinManagerAppl = new NetworkJoinManager(join, joinNetworkSubSocketAddr, true);
 
         HyperZMQ member = new HyperZMQ("memberClient", "password", true);
         NetworkJoinManager joinManagerMember = new NetworkJoinManager(member, joinNetworkSubSocketAddr, true);

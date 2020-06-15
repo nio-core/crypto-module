@@ -77,7 +77,7 @@ public class TextMessagesTest {
     }
 
     @Test
-    public void testReadWriteToChain() {
+    public void testReadWriteToChain() throws InterruptedException {
         // CSVStringsTP.main(null);
         //sleep(1000);
 
@@ -91,6 +91,7 @@ public class TextMessagesTest {
         String key = client1.getKeyForGroup(TESTGROUP);
         client2.addGroup(TESTGROUP, key);
 
+        Thread.sleep(500);
         // The client receives its own messages because it subscribed to the group
         client1.addCallbackToGroup(TESTGROUP, ((group, message, sender) -> {
             System.out.println("[Client1] received: group=" + group + ", message=" + message + ", sender=" + sender);

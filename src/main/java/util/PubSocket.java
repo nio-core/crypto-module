@@ -20,19 +20,34 @@ public class PubSocket {
         return address;
     }
 
-    public boolean send(String message, String topic) {
+    public void bind() {
         socket.bind(address);
+    }
+
+    public void disconnect() {
+        socket.disconnect(address);
+    }
+
+
+    public boolean send(String message, String topic) {
+
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        String toSend = topic == null ? message :
-                (topic + TOPIC_SUFFIX + message);
+        //String toSend = topic == null ? message :
+        //      (topic + TOPIC_SUFFIX + message);
         //System.out.println("Sending message: " + toSend);
+        boolean ret = false;
+        if (topic != null) {
+            ret = socket.send(topic + TOPIC_SUFFIX);
+            ret = socket.sendMore(message);
+        } else {
+            ret = socket.send(message);
+        }
+        System.out.println("Sent message:" + message);
 
-        boolean ret = socket.send(toSend);
-        socket.disconnect(address);
         return ret;
     }
 }

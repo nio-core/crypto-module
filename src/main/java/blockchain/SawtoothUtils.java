@@ -31,6 +31,9 @@ public class SawtoothUtils {
 
     /**
      * Build a Sawtooth address from the namespace and a hashable
+     * An address is a hex-encoded 70 character string representing 35 bytes
+     * The address format contains a 3 byte (6 hex character) namespace prefix
+     * The rest of the address format is up to the implementation
      *
      * @param namespace namespace of the transaction family the address is for
      * @param toHash    hashable object which will make up the address

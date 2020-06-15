@@ -129,9 +129,7 @@ public class KeyExReceiptHandler implements TransactionHandler {
             }
 
             print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
-        }
-        else if (receipt.getReceiptType() == ReceiptType.JOIN_NETWORK)
-        {
+        } else if (receipt.getReceiptType() == ReceiptType.JOIN_NETWORK) {
             print("Receipt is of JOIN_NETWORK type, updating members entry...");
             String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, "AllChat");
             print("Members address: " + groupAddress);
@@ -160,7 +158,7 @@ public class KeyExReceiptHandler implements TransactionHandler {
                 Collections.singletonList(address));
 
         ByteString bsEntry = entries.get(address);
-        return new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
+        return bsEntry == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
     }
 
     private void print(String message) {

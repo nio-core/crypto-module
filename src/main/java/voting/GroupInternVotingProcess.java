@@ -13,20 +13,18 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
 
     private final HyperZMQ hyperZMQ;
     private VotingResult result;
-    private final int sleepMS;
 
     private AtomicBoolean otherFactor = new AtomicBoolean(true);
 
     private BlockingQueue<Vote> resultBuffer = new ArrayBlockingQueue<Vote>(100);
 
-    public GroupInternVotingProcess(HyperZMQ hyperZMQ, int sleepMS) {
+    public GroupInternVotingProcess(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
-        this.sleepMS = sleepMS;
     }
 
     @Override
     public VotingResult vote(VotingMatter votingMatter) {
-        System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING");
+        System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING -- desired Voters: " + votingMatter.getDesiredVoters().toString());
         // Register callback to evaluate the votes
         hyperZMQ.addGroupVoteReceiver(this);
 

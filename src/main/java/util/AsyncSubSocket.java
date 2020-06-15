@@ -13,6 +13,7 @@ public class AsyncSubSocket implements Runnable {
     private final String topic;
     private static final boolean doPrint = true;
     private final String address;
+    public final static String TOPIC_SUFFIX = "-!-";
 
     public AsyncSubSocket(IAsyncSubSocketCallback callback, String address, String topic, int receiveTimeoutMS) {
         this.callback = callback;
@@ -24,7 +25,12 @@ public class AsyncSubSocket implements Runnable {
         socket.setReceiveTimeOut(receiveTimeoutMS);
 
         socket.connect(address);
-        socket.subscribe(topic.getBytes());
+        if (topic != null) {
+            String toSub = topic + TOPIC_SUFFIX;
+            print("Subscribing: " + toSub);
+            socket.subscribe(toSub.getBytes());
+        }
+
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {

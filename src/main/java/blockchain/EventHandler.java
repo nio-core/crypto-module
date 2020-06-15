@@ -1,6 +1,8 @@
 package blockchain;
 
 import client.HyperZMQ;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -11,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import joingroup.JoinRequest;
+import messages.GroupMessage;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
@@ -21,6 +24,7 @@ import sawtooth.sdk.protobuf.EventList;
 import sawtooth.sdk.protobuf.EventSubscription;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Message.MessageType;
+import util.Utilities;
 
 public class EventHandler implements AutoCloseable {
     private final HyperZMQ hyperzmq;
@@ -85,17 +89,19 @@ public class EventHandler implements AutoCloseable {
                             list = EventList.parseFrom(messageReceived.getContent());
                         } catch (InvalidProtocolBufferException e) {
                             e.printStackTrace();
-                            break;
+                            continue;
                         }
                         // TODO distribute events here depending on type
                         for (Event e : list.getEventsList()) {
                             String received = e.toString();
                             //print("Received Event: " + received);
                             if (e.getEventType().equals("AllChat")) {
-
+                                hyperzmq.handleAllChatMessage(e.getData().toStringUtf8(), e.getAttributes(0).getValue());
                             } else {
                                 // Group Messages (CSVStrings)
                                 // Check whether the event is a new encrypted message or a JoinGroup request
+                                // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address
+                                // Because JoinRequests are not written to the blockchain
                                 Event.Attribute attr = e.getAttributes(0);
                                 if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
                                     JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
@@ -121,22 +127,13 @@ public class EventHandler implements AutoCloseable {
                                 //  Handle Group Messages (Normal message, Contract, VotingMatter, Vote)
                                 //  Filter for VotingMatter and Vote to put those in the corresponding queues
                                 //-----------------------------------------------------------------------------------
-                                String fullMessage = received.substring(received.indexOf("data"));
-                                //print("fullMessage: " + fullMessage);
 
-                                String csvMessage = fullMessage.substring(7, fullMessage.length() - 2); //TODO
-                                //print("csvMessage: " + csvMessage);
-
-                                String[] parts = csvMessage.split(",");
-                                if (parts.length < 2) {
-                                    print("Malformed event payload: " + csvMessage);
-                                    return;
+                                GroupMessage groupMessage = Utilities.deserializeMessage(e.getData().toStringUtf8(), GroupMessage.class);
+                                if (groupMessage != null) {
+                                    hyperzmq.newEventReceived(groupMessage.group, groupMessage.payload);
+                                } else {
+                                    print("Deserialization failed!");
                                 }
-                                String group = parts[0];
-                                String encMessage = parts[1];
-                                //print("Group: " + group);
-                                //print("Encrypted Message: " + encMessage);
-                                hyperzmq.newEventReceived(group, encMessage);
                             }
                         }
                         break;

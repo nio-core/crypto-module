@@ -20,6 +20,7 @@ import joingroup.IJoinGroupStatusCallback;
 import joingroup.JoinRequest;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
+import messages.GroupMessage;
 import messages.MessageFactory;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -365,12 +366,19 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     private boolean sendSingleEnvelope(String group, Envelope envelope, String outputAddr) {
-        byte[] payloadBytes = encryptEnvelope(group, envelope);
+        String payload = encryptEnvelope(group, envelope);
+
+        GroupMessage groupMessage = null;
+        if (outputAddr == null) {
+            groupMessage = new GroupMessage(group, payload, true, true);
+        } else {
+            groupMessage = new GroupMessage(group, payload, true, outputAddr, true);
+        }
 
         List<Transaction> transactionList =
                 Collections.singletonList(
                         blockchainHelper.
-                                csvStringsTransaction(payloadBytes, outputAddr));
+                                csvStringsTransaction(groupMessage.getBytes(), outputAddr));
 
         return blockchainHelper.buildAndSendBatch(transactionList);
     }
@@ -379,9 +387,12 @@ public class HyperZMQ implements AutoCloseable {
         List<Transaction> transactionList = new ArrayList<>();
         list.forEach((groupName, envelopeList) -> {
             envelopeList.forEach((envelope -> {
+                String payload = encryptEnvelope(groupName, envelope);
+                // TODO write to chain / broadcast behavior
+                GroupMessage groupMessage = new GroupMessage(groupName, payload, true, true);
                 transactionList.add(
                         blockchainHelper.
-                                csvStringsTransaction(encryptEnvelope(groupName, envelope)));
+                                csvStringsTransaction(groupMessage.getBytes()));
             }));
         });
 
@@ -717,11 +728,10 @@ public class HyperZMQ implements AutoCloseable {
         }
     }
 
-    byte[] encryptEnvelope(String group, Envelope envelope) {
+    String encryptEnvelope(String group, Envelope envelope) {
         // Create the payload in CSV format
         // The group stays in clearText so clients attempting to decrypt can know if they can without trial and error
         StringBuilder msgBuilder = new StringBuilder();
-        msgBuilder.append(group).append(",");
         // Encrypt the whole message
         try {
             msgBuilder.append(crypto.encrypt(envelope.toString(), group));
@@ -733,7 +743,7 @@ public class HyperZMQ implements AutoCloseable {
             print("Trying to encrypt for group for which the key is not present (" + group + "). Message will not be send.");
             return null;
         }
-        return msgBuilder.toString().getBytes(UTF_8);
+        return msgBuilder.toString();
     }
 
     void print(String message) {
@@ -968,7 +978,7 @@ public class HyperZMQ implements AutoCloseable {
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
-    void handleAllChatMessage(String message, String sender) {
+    public void handleAllChatMessage(String message, String sender) {
         // Only check for votingMatter type messages to handle automatically
         // Vote type messages should be passed to all registered receivers because they might use it for
         // custom voting processes
@@ -1010,9 +1020,12 @@ public class HyperZMQ implements AutoCloseable {
 
         Envelope envelope = new Envelope(this.clientID, MESSAGETYPE_VOTING_MATTER, votingMatter.toString());
 
-        byte[] payload = encryptEnvelope(votingMatter.getJoinRequest().getGroupName(), envelope);
-        Transaction t = blockchainHelper.csvStringsTransaction(payload);
-        print("Sending VotingMatter in group: " + new String(payload, UTF_8));
+        String payload = encryptEnvelope(votingMatter.getJoinRequest().getGroupName(), envelope);
+        // TODO write to chain behavior?
+        GroupMessage groupMessage = new GroupMessage(votingMatter.getJoinRequest().getGroupName(), payload, true, true);
+
+        Transaction t = blockchainHelper.csvStringsTransaction(groupMessage.getBytes());
+        print("Sending VotingMatter in group: " + groupMessage.toString());
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
