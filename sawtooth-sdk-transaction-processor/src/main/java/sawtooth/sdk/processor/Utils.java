@@ -15,7 +15,6 @@
 package sawtooth.sdk.processor;
 
 import blockchain.SawtoothUtils;
-
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

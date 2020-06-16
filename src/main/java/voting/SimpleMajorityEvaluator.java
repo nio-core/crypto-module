@@ -1,7 +1,6 @@
 package voting;
 
 import blockchain.SawtoothUtils;
-
 import java.util.List;
 
 public class SimpleMajorityEvaluator implements IVoteEvaluator {

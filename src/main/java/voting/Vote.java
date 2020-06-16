@@ -2,9 +2,6 @@ package voting;
 
 import com.google.gson.Gson;
 import keyexchange.ISignableMessage;
-import sawtooth.sdk.signing.Signer;
-
-import java.nio.charset.StandardCharsets;
 
 public class Vote implements ISignableMessage {
 

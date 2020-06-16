@@ -3,7 +3,8 @@ package client;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
 import groups.Envelope;
-
+import groups.GroupMessage;
+import groups.MessageType;
 import java.net.ConnectException;
 import java.util.Collections;
 import java.util.List;
@@ -14,15 +15,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
-
 import joingroup.JoinRequest;
-import messages.GroupMessage;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
 import subgrouping.ISubgroupSelector;
-import voting.*;
-
-import static groups.Envelope.MESSAGETYPE_VOTE;
+import voting.IVoteEvaluator;
+import voting.IVoteStatusCallback;
+import voting.IVotingProcess;
+import voting.IVotingStrategy;
+import voting.JoinRequestType;
+import voting.Vote;
+import voting.VotingMatter;
+import voting.VotingResult;
 
 public class VoteManager {
 
@@ -55,6 +59,8 @@ public class VoteManager {
     private IVoteEvaluator voteEvaluator = null;
 
     private IVoteStatusCallback statusCallback = null;
+
+    private int votingProcessTimeoutMS = 3000;
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
@@ -107,7 +113,7 @@ public class VoteManager {
                     } else if (matter.getJoinRequest().getType().equals(JoinRequestType.GROUP)) {
                         // If the votingMatter was about joining group, sent the vote back in the specified group
                         // TODO make this more generic?
-                        Envelope env = new Envelope(hyperZMQ.getClientID(), MESSAGETYPE_VOTE, vote.toString());
+                        Envelope env = new Envelope(hyperZMQ.getClientID(), MessageType.VOTE, vote.toString());
                         String payload = hyperZMQ.encryptEnvelope(matter.getJoinRequest().getGroupName(), env);
                         // TODO write to chain behavior
                         GroupMessage message = new GroupMessage(matter.getJoinRequest().getGroupName(), payload, false, true);
@@ -167,7 +173,7 @@ public class VoteManager {
 
                     List<String> groupMembers;
                     if (joinRequest.getType().equals(JoinRequestType.GROUP)) {
-                        groupMembers = hyperZMQ.getGroupMembers(joinRequest.getGroupName());
+                        groupMembers = hyperZMQ.getGroupMembersFromReceipts(joinRequest.getGroupName());
                     } else {
                         groupMembers = hyperZMQ.getNetworkMembers();
                     }
@@ -180,8 +186,8 @@ public class VoteManager {
                     }
 
                     VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, joinRequest);
-                    // TODO add timeout to process - if reached reject the request?
-                    VotingResult result = process.vote(votingMatter);
+                    // TODO enforce timeout here - if reached reject the request or take best shot from process?
+                    VotingResult result = process.vote(votingMatter, votingProcessTimeoutMS);
                     //print("VoteProcess finished with result: " + result.toString());
                     boolean isApproved = voteEvaluator.evaluateVotes(result);
                     //print("Votes were evaluated with result: " + isApproved);
@@ -226,13 +232,13 @@ public class VoteManager {
                         joinRequest.getApplicantPublicKey(),
                         joinRequest.getAddress(),
                         joinRequest.getPort(), false);
-                print("Starting DH...");
+                print("Starting Diffie-Hellman to create session key...");
                 EncryptedStream encryptedStream = null;
                 try {
                     encryptedStream = exchange.call();
                 } catch (ConnectException e) {
                     // TODO applicant has not set up a server
-                    print("Cannot nofity the applicant because no server is listening for a connection on: "
+                    print("Cannot notify the applicant because no server is listening for a connection on: "
                             + joinRequest.getAddress() + ":" + joinRequest.getPort());
                     //e.printStackTrace();
                 } catch (Exception e) {

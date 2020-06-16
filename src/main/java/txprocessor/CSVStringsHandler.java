@@ -3,8 +3,7 @@ package txprocessor;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.google.protobuf.ByteString;
-import java.nio.charset.StandardCharsets;
+import groups.GroupMessage;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -14,7 +13,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import joingroup.JoinRequest;
-import messages.GroupMessage;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -50,7 +48,6 @@ public class CSVStringsHandler implements TransactionHandler {
         namespaces.add(namespace);
         return namespaces;
     }
-// TODO change payload layout to have message type visible since some message types do not need to be written to the state
 
     /**
      * A TRANSACTION CAN BE SENT TO THE TRANSACTION PROCESSOR MULTIPLE TIMES.
@@ -76,7 +73,6 @@ public class CSVStringsHandler implements TransactionHandler {
         TransactionHeader header = tpProcessRequest.getHeader();
 
         // Check payload integrity
-        //String receivedHash = Utils.hash512(tpProcessRequest.getPayload().toByteArray());
         String receivedHash = SawtoothUtils.hash(tpProcessRequest.getPayload().toString(UTF_8));
         if (!header.getPayloadSha512().equals(receivedHash)) {
             throw new InvalidTransactionException("Payload or Header is corrupted!");
@@ -104,7 +100,6 @@ public class CSVStringsHandler implements TransactionHandler {
                 }
 
                 // Nothing else to do?
-                return;
             } catch (JsonSyntaxException ignored) {
             }
         } else {

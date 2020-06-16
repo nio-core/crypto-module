@@ -2,7 +2,6 @@ package voting;
 
 import client.HyperZMQ;
 import groups.IGroupVoteReceiver;
-
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -12,18 +11,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final HyperZMQ hyperZMQ;
-    private VotingResult result;
 
-    private AtomicBoolean otherFactor = new AtomicBoolean(true);
+    private final AtomicBoolean otherFactor = new AtomicBoolean(true);
 
-    private BlockingQueue<Vote> resultBuffer = new ArrayBlockingQueue<Vote>(100);
+    private final BlockingQueue<Vote> resultBuffer = new ArrayBlockingQueue<Vote>(100);
 
     public GroupInternVotingProcess(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
     }
 
     @Override
-    public VotingResult vote(VotingMatter votingMatter) {
+    public VotingResult vote(VotingMatter votingMatter, int timeInMs) {
         System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING -- desired Voters: " + votingMatter.getDesiredVoters().toString());
         // Register callback to evaluate the votes
         hyperZMQ.addGroupVoteReceiver(this);
@@ -32,11 +30,15 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
         hyperZMQ.sendVotingMatterInGroup(votingMatter);
 
         // Prepare the result
-        result = new VotingResult(votingMatter, new ArrayList<>());
+        VotingResult result = new VotingResult(votingMatter, new ArrayList<>());
 
-        while (result.getVotesSize() < votingMatter.getDesiredVoters().size() && otherFactor.get()) {
+        long endTime = System.currentTimeMillis() + timeInMs;
+
+        // End conditions are the time, if all required votes were received or termination from setting the boolean
+        while (result.getVotesSize() < votingMatter.getDesiredVoters().size() && otherFactor.get()
+                && System.currentTimeMillis() < endTime) {
             try {
-                Vote v = resultBuffer.poll(500, TimeUnit.MILLISECONDS);
+                Vote v = resultBuffer.poll(100, TimeUnit.MILLISECONDS);
                 if (v != null) {
                     result.addVote(v);
                 }

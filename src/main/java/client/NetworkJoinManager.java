@@ -3,7 +3,6 @@ package client;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import joingroup.JoinRequest;
 import joinnetwork.JNApplicantThread;
 import joinnetwork.JNMemberThread;
@@ -22,7 +21,7 @@ public class NetworkJoinManager implements IAsyncSubSocketCallback {
     private final ExecutorService jnListenerExService = Executors.newSingleThreadExecutor();
     private final String joinNetworkAddress;
 
-    private final AsyncSubSocket jnSubSocket;
+    private AsyncSubSocket jnSubSocket;
     private static final int JOIN_NETWORK_RECEIVE_TIMEOUT_MS = 5000;
     private static final int DEFAULT_PORT = 5555;
 
@@ -33,9 +32,10 @@ public class NetworkJoinManager implements IAsyncSubSocketCallback {
         this.clientID = hyperZMQ.getClientID();
         this.hyperZMQ = hyperZMQ;
         this.joinNetworkAddress = joinNetworkSubAddress;
-        this.jnSubSocket = new AsyncSubSocket(this, joinNetworkSubAddress, JOIN_SAWTOOTH_NETWORK_TOPIC,
-                JOIN_NETWORK_RECEIVE_TIMEOUT_MS);
+        this.jnSubSocket = null;
         if (runListener) {
+            this.jnSubSocket = new AsyncSubSocket(clientID, this, joinNetworkSubAddress, JOIN_SAWTOOTH_NETWORK_TOPIC,
+                    JOIN_NETWORK_RECEIVE_TIMEOUT_MS);
             jnListenerExService.submit(jnSubSocket);
         }
     }

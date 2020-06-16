@@ -6,6 +6,7 @@ package voting;
  */
 public interface IVotingProcess {
 
-    VotingResult vote(VotingMatter votingMatter);
+    // TODO enforce the timeout by measuring the time in the votemanager - how to return a half processed result?
+    VotingResult vote(VotingMatter votingMatter, int timeInMs);
 
 }

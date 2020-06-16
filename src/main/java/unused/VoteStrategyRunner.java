@@ -1,11 +1,10 @@
 package unused;
 
+import java.util.concurrent.Callable;
 import sawtooth.sdk.signing.Signer;
 import voting.IVotingStrategy;
 import voting.Vote;
 import voting.VotingMatter;
-
-import java.util.concurrent.Callable;
 
 public class VoteStrategyRunner implements Callable<Vote> {
 

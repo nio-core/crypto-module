@@ -1,12 +1,11 @@
 package util;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.Assert;
 import org.junit.Test;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class AsyncSocketTest implements IAsyncSubSocketCallback {
 
@@ -17,7 +16,7 @@ public class AsyncSocketTest implements IAsyncSubSocketCallback {
 
     @Test
     public void test() throws InterruptedException {
-        AsyncSubSocket rsock = new AsyncSubSocket(this, address, topic, 4000);
+        AsyncSubSocket rsock = new AsyncSubSocket("test", this, address, topic, 4000);
         ExecutorService e = Executors.newSingleThreadExecutor();
         e.submit(rsock);
 

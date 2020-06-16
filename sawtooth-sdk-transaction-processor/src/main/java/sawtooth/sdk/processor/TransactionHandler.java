@@ -14,11 +14,10 @@
 
 package sawtooth.sdk.processor;
 
+import java.util.Collection;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
-
-import java.util.Collection;
 
 /**
  * Interface for creating a transaction handler.

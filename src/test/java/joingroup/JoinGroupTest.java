@@ -1,32 +1,12 @@
 package joingroup;
 
-import blockchain.SawtoothUtils;
 import client.HyperZMQ;
-import diffiehellman.DHKeyExchange;
-import diffiehellman.EncryptedStream;
-import java.io.IOException;
-import java.sql.Time;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Test;
-import sawtooth.sdk.signing.Context;
-import sawtooth.sdk.signing.PrivateKey;
-import sawtooth.sdk.signing.Secp256k1Context;
-import sawtooth.sdk.signing.Secp256k1PrivateKey;
-import sawtooth.sdk.signing.Signer;
-import subgrouping.RandomSubgroupSelector;
 import voting.GroupInternVotingProcess;
-import voting.JoinRequestType;
-import voting.NoVoteStrategy;
 import voting.SimpleMajorityEvaluator;
-import voting.VotingMatter;
 import voting.YesVoteStrategy;
 
 import static org.junit.Assert.assertEquals;

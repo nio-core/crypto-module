@@ -1,6 +1,10 @@
 package unused;
 
 import client.HyperZMQ;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import joingroup.JoinRequest;
 import sawtooth.sdk.signing.Signer;
 import subgrouping.ISubgroupSelector;
@@ -8,11 +12,6 @@ import voting.IVoteEvaluator;
 import voting.IVotingProcess;
 import voting.VotingMatter;
 import voting.VotingResult;
-
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.Callable;
 
 public class VoteProcessRunner implements Callable<Boolean> {
 
@@ -51,7 +50,7 @@ public class VoteProcessRunner implements Callable<Boolean> {
     public Boolean call() throws Exception {
         Objects.requireNonNull(votingProcess, "No voting process registered to execute. Cancelling JoinGroupRequest");
         print("Starting vote...");
-        List<String> groupMembers = hyperZMQ.getGroupMembers(request.getGroupName());
+        List<String> groupMembers = hyperZMQ.getGroupMembersFromReceipts(request.getGroupName());
         // Let self vote 7
 
         if (groupMembers.size() > votingParticipantsThreshold) {
@@ -64,7 +63,7 @@ public class VoteProcessRunner implements Callable<Boolean> {
         VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, request);
 
         print("Requiring votes from:" + groupMembers.toString());
-        VotingResult result = votingProcess.vote(votingMatter);
+        VotingResult result = votingProcess.vote(votingMatter, 5000);
 
         return voteEvaluator.evaluateVotes(result);
 

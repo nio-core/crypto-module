@@ -3,7 +3,6 @@ package txprocessor;
 import blockchain.SawtoothUtils;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;

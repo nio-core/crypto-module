@@ -79,6 +79,9 @@ public class JNMemberThread implements Runnable {
                 out.println("Invalid signature!");
                 joiningManager.authenticationFailure(joinRequest);
             }
+            in.close();
+            out.close();
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -14,11 +14,10 @@
 package sawtooth.sdk.processor;
 
 import com.google.protobuf.ByteString;
-import sawtooth.sdk.processor.exceptions.InternalError;
-import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
-
 import java.util.Collection;
 import java.util.Map;
+import sawtooth.sdk.processor.exceptions.InternalError;
+import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
 /**
  * Interface for interaction with the context manager.

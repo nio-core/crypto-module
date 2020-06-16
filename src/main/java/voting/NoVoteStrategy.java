@@ -1,8 +1,7 @@
 package voting;
 
-import sawtooth.sdk.signing.Signer;
-
 import java.nio.charset.StandardCharsets;
+import sawtooth.sdk.signing.Signer;
 
 public class NoVoteStrategy implements IVotingStrategy {
 

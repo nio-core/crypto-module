@@ -1,9 +1,8 @@
 package blockchain;
 
 import client.HyperZMQ;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import groups.GroupMessage;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -13,7 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import joingroup.JoinRequest;
-import messages.GroupMessage;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;

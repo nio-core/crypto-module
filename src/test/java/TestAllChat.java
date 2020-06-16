@@ -1,4 +1,3 @@
-import blockchain.IAllChatReceiver;
 import client.HyperZMQ;
 import org.junit.Assert;
 import org.junit.Test;

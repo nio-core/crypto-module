@@ -1,4 +1,4 @@
-package messages;
+package groups;
 
 import blockchain.BlockchainHelper;
 import blockchain.SawtoothUtils;
@@ -6,7 +6,8 @@ import com.google.gson.Gson;
 import java.nio.charset.StandardCharsets;
 
 /**
- * This object is deserialized by the Transaction Processor to extract the info
+ * This object is deserialized by the Transaction Processor to extract the info of what to do with the transaction.
+ * New instructions can be passed easily by expanding this class.
  */
 public class GroupMessage {
     public final String group;
@@ -31,7 +32,6 @@ public class GroupMessage {
         this.doWriteToChain = doWriteToChain;
         this.addressOnChain = addressOnChain;
         this.doBroadcast = doBroadcast;
-
     }
 
     @Override

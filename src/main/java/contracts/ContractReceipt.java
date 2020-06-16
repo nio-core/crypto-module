@@ -1,9 +1,8 @@
 package contracts;
 
 import com.google.gson.Gson;
-
-import javax.annotation.Nonnull;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 
 public class ContractReceipt {
 

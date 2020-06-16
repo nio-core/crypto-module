@@ -15,10 +15,6 @@
 package sawtooth.sdk.messaging;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.zeromq.*;
-import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
-import sawtooth.sdk.protobuf.Message;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
@@ -28,6 +24,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.zeromq.ZContext;
+import org.zeromq.ZFrame;
+import org.zeromq.ZLoop;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMsg;
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
+import sawtooth.sdk.protobuf.Message;
 
 /**
  * An internal messaging implementation used by the Stream class.

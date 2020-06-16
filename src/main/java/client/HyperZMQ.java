@@ -3,6 +3,7 @@ package client;
 import blockchain.BlockchainHelper;
 import blockchain.EventHandler;
 import blockchain.IAllChatReceiver;
+import blockchain.PingHandler;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -13,29 +14,10 @@ import contracts.IContractProcessor;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
 import groups.Envelope;
+import groups.GroupMessage;
 import groups.IGroupCallback;
 import groups.IGroupVoteReceiver;
-
-import joingroup.IJoinGroupStatusCallback;
-import joingroup.JoinRequest;
-import keyexchange.KeyExchangeReceipt;
-import keyexchange.ReceiptType;
-import messages.GroupMessage;
-import messages.MessageFactory;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.Transaction;
-import sawtooth.sdk.signing.Secp256k1Context;
-import sawtooth.sdk.signing.Secp256k1PrivateKey;
-import sawtooth.sdk.signing.Signer;
-import util.Utilities;
-import voting.JoinRequestType;
-import voting.Vote;
-import voting.VotingMatter;
-import zmq.io.mechanism.curve.Curve;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import groups.MessageType;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -50,12 +32,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import joingroup.IJoinGroupStatusCallback;
+import joingroup.JoinRequest;
+import keyexchange.KeyExchangeReceipt;
+import keyexchange.ReceiptType;
+import messages.MessageFactory;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import sawtooth.sdk.protobuf.Transaction;
+import sawtooth.sdk.signing.Secp256k1Context;
+import sawtooth.sdk.signing.Secp256k1PrivateKey;
+import sawtooth.sdk.signing.Signer;
+import util.Utilities;
+import voting.JoinRequestType;
+import voting.Vote;
+import voting.VotingMatter;
+import zmq.io.mechanism.curve.Curve;
 
-import static groups.Envelope.MESSAGETYPE_CONTRACT;
-import static groups.Envelope.MESSAGETYPE_CONTRACT_RECEIPT;
-import static groups.Envelope.MESSAGETYPE_TEXT;
-import static groups.Envelope.MESSAGETYPE_VOTE;
-import static groups.Envelope.MESSAGETYPE_VOTING_MATTER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class HyperZMQ implements AutoCloseable {
@@ -88,6 +83,8 @@ public class HyperZMQ implements AutoCloseable {
 
     private final MessageFactory messageFactory;
 
+    private final PingHandler pingHandler;
+
     /**
      * @param id               id
      * @param pathToKeyStore   path to a keystore file including .jks
@@ -104,6 +101,7 @@ public class HyperZMQ implements AutoCloseable {
         this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
+        this.pingHandler = new PingHandler(this);
         registerClient();
     }
 
@@ -117,6 +115,7 @@ public class HyperZMQ implements AutoCloseable {
         this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
+        this.pingHandler = new PingHandler(this);
         registerClient();
     }
 
@@ -323,7 +322,7 @@ public class HyperZMQ implements AutoCloseable {
             return false;
         }
         // Wrap the message - the complete envelope will be encrypted
-        Envelope envelope = new Envelope(clientID, MESSAGETYPE_TEXT, message);
+        Envelope envelope = new Envelope(clientID, MessageType.TEXT, message);
         return sendSingleEnvelope(groupName, envelope, null);
     }
 
@@ -358,7 +357,7 @@ public class HyperZMQ implements AutoCloseable {
         map.forEach((group, messages) -> {
             List<Envelope> envelopeList = new ArrayList<>();
             for (String message : messages) {
-                envelopeList.add(new Envelope(clientID, MESSAGETYPE_TEXT, message));
+                envelopeList.add(new Envelope(clientID, MessageType.TEXT, message));
             }
             list.put(group, envelopeList);
         });
@@ -420,7 +419,7 @@ public class HyperZMQ implements AutoCloseable {
         }
         List<Envelope> envelopes = new ArrayList<>();
         map.forEach((contract, callback) -> {
-            Envelope e = new Envelope(clientID, MESSAGETYPE_CONTRACT, contract.toString());
+            Envelope e = new Envelope(clientID, MessageType.CONTRACT, contract.toString());
             envelopes.add(e);
             if (callback != null) {
                 contractCallbacks.put(contract.getContractID(), callback);
@@ -435,7 +434,7 @@ public class HyperZMQ implements AutoCloseable {
             return false;
         }
         // Wrap the contract - the complete envelope will be encrypted
-        Envelope envelope = new Envelope(clientID, MESSAGETYPE_CONTRACT, contract.toString());
+        Envelope envelope = new Envelope(clientID, MessageType.CONTRACT, contract.toString());
         return sendSingleEnvelope(groupName, envelope, contract.getOutputAddr());
     }
 
@@ -445,7 +444,7 @@ public class HyperZMQ implements AutoCloseable {
             return false;
         }
 
-        Envelope envelope = new Envelope(clientID, MESSAGETYPE_CONTRACT_RECEIPT, receipt.toString());
+        Envelope envelope = new Envelope(clientID, MessageType.CONTRACT_RECEIPT, receipt.toString());
         //System.out.println("Sending receipt to addr: " + resultOutputAddr);
         return sendSingleEnvelope(groupName, envelope, resultOutputAddr);
     }
@@ -584,25 +583,25 @@ public class HyperZMQ implements AutoCloseable {
         Envelope envelope = new Gson().fromJson(plainMessage, Envelope.class);
         // TODO PROCESS NEW MESSAGE TYPES HERE
         switch (envelope.getType()) {
-            case MESSAGETYPE_CONTRACT: {
+            case CONTRACT: {
                 handleContractMessage(group, envelope);
                 if (passthroughAll) {
                     handleTextMessage(group, envelope);
                 }
                 break;
             }
-            case MESSAGETYPE_TEXT: {
+            case TEXT: {
                 handleTextMessage(group, envelope);
                 break;
             }
-            case MESSAGETYPE_CONTRACT_RECEIPT: {
+            case CONTRACT_RECEIPT: {
                 handleContractReceipt(group, envelope);
                 if (passthroughAll) {
                     handleTextMessage(group, envelope);
                 }
                 break;
             }
-            case MESSAGETYPE_VOTING_MATTER: {
+            case VOTING_MATTER: {
                 handleVotingMatter(group, envelope);
                 // TODO maybe not do this?
                 /*if (passthroughAll) {
@@ -610,7 +609,7 @@ public class HyperZMQ implements AutoCloseable {
                 } */
                 break;
             }
-            case MESSAGETYPE_VOTE: {
+            case VOTE: {
                 // Pass the vote to the outlet if one is available
                 if (!groupVoteReceivers.isEmpty()) {
                     Vote vote = SawtoothUtils.deserializeMessage(envelope.getRawMessage(), Vote.class);
@@ -789,7 +788,34 @@ public class HyperZMQ implements AutoCloseable {
         return new ArrayList<>(Arrays.asList(resp.split(",")));
     }
 
-    public ArrayList<String> getGroupMembers(String groupName) {
+    /**
+     * Send a ping in the group and collect ping responses for the given time.
+     * This method blocks for at least the given time.
+     *
+     * @param groupName group to ping
+     * @param timeInMs  time to run this for
+     * @return list of publickey of entities that responded and were verified, empty list if no responses
+     */
+    public ArrayList<String> getGroupMembersByPing(String groupName, int timeInMs) {
+        if (!isGroupAvailable(groupName)) {
+            print("Cant ping members of group that the client is not part of!");
+            return new ArrayList<>();
+        }
+
+        // generate some nonce that identifies this ping request
+        String nonce = Utilities.generateNonce(20);
+        Envelope envelope = new Envelope(this.clientID, MessageType.PING_REQUEST, nonce);
+
+        // Send the ping request to the group
+        GroupMessage groupMessage = new GroupMessage(groupName, encryptEnvelope(groupName, envelope), false, true);
+        Transaction t = blockchainHelper.csvStringsTransaction(groupMessage.getBytes());
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+
+        // Let the ping handler collect the ping responses for the given time and return
+        return pingHandler.getGroupMembersByPing(nonce, timeInMs);
+    }
+
+    public ArrayList<String> getGroupMembersFromReceipts(String groupName) {
         Objects.requireNonNull(groupName);
         /* TODO
         if (!groupIsAvailable(groupName)) {
@@ -844,7 +870,7 @@ public class HyperZMQ implements AutoCloseable {
         String realContactKey = contactPublicKey;
         if (realContactKey == null) {
             // If no contact is given, get the client responsible for the group by checking the entry
-            List<String> members = getGroupMembers(groupName);
+            List<String> members = getGroupMembersFromReceipts(groupName);
             if (members.isEmpty()) {
                 notifyCallback(IJoinGroupStatusCallback.NO_CONTACT_FOUND,
                         "No contact could be found from the blockchain", callback);
@@ -911,7 +937,7 @@ public class HyperZMQ implements AutoCloseable {
             String realContactKey = contactPublicKey;
             if (realContactKey == null) {
                 // If no contact is given, get the client responsible for the group by checking the entry
-                List<String> members = getGroupMembers(groupName);
+                List<String> members = getGroupMembersFromReceipts(groupName);
                 if (members.isEmpty()) {
                     notifyCallback(IJoinGroupStatusCallback.NO_CONTACT_FOUND,
                             "No contact could be found from the blockchain", callback);
@@ -1018,7 +1044,7 @@ public class HyperZMQ implements AutoCloseable {
             throw new IllegalArgumentException("The group specified in the VotingMatter is not available on this client!");
         }
 
-        Envelope envelope = new Envelope(this.clientID, MESSAGETYPE_VOTING_MATTER, votingMatter.toString());
+        Envelope envelope = new Envelope(this.clientID, MessageType.VOTING_MATTER, votingMatter.toString());
 
         String payload = encryptEnvelope(votingMatter.getJoinRequest().getGroupName(), envelope);
         // TODO write to chain behavior?

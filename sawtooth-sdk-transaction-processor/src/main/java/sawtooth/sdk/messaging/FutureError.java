@@ -15,9 +15,8 @@
 package sawtooth.sdk.messaging;
 
 import com.google.protobuf.ByteString;
-import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
-
 import java.util.concurrent.TimeoutException;
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 
 /**
  * FutureError throws a ValidatorConnectionError from all of its methods. Used

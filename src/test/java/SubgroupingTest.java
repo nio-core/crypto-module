@@ -1,12 +1,11 @@
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.HashSubgroupSelector;
 import subgrouping.ISubgroupSelector;
 import subgrouping.RandomSubgroupSelector;
 import util.Utilities;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class SubgroupingTest {
 

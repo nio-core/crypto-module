@@ -2,10 +2,13 @@ package joinnetwork;
 
 import blockchain.SawtoothUtils;
 import client.NetworkJoinManager;
+import diffiehellman.DHKeyExchange;
+import diffiehellman.EncryptedStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Map;
@@ -63,9 +66,21 @@ public class JNApplicantThread implements Runnable {
                 additionalInfo,
                 address,
                 port);
+
+        pubSocket.bind();
+        try {
+            Thread.sleep(400);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         pubSocket.send(joinRequest.toString(), NetworkJoinManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
         print("Sent join request");
-        //print("sent message:" + message1.toString());
+        /*
+        for (int i = 0; i < 6; i++) {
+
+        }
+        */
+        pubSocket.disconnect();
 
         // Im the server
         try {
@@ -101,9 +116,35 @@ public class JNApplicantThread implements Runnable {
             print("Sent response: " + response);
             // Wait for ok
             s = in.readLine();
-            print(s);
+            print("Received authentication response: " + s);
 
+            clientSocket.close();
+            serverSocket.close();
+
+            // TODO vvv
+            if ("OK!!!".equals(s)) {
+                DHKeyExchange exchange = new DHKeyExchange(myID,
+                        mySigner,
+                        joinRequest.getApplicantPublicKey(),
+                        joinRequest.getAddress(),
+                        joinRequest.getPort(), true);
+                EncryptedStream encryptedStream = null;
+                try {
+                    encryptedStream = exchange.call();
+                } catch (ConnectException e) {
+                    // TODO applicant has not set up a server
+                    print("Cannot notify the applicant because no server is listening for a connection on: "
+                            + joinRequest.getAddress() + ":" + joinRequest.getPort());
+                    //e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+
+            }
             // TODO if ok authenticated - setup server again to listen for vote result
+
+
         } catch (IOException e) {
             e.printStackTrace();
             return;

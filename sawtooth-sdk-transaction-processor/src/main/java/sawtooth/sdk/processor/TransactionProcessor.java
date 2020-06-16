@@ -16,18 +16,23 @@ package sawtooth.sdk.processor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
-import sawtooth.sdk.protobuf.*;
-
-import java.util.ArrayList;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.PingResponse;
+import sawtooth.sdk.protobuf.TpProcessRequest;
+import sawtooth.sdk.protobuf.TpProcessResponse;
+import sawtooth.sdk.protobuf.TpRegisterRequest;
+import sawtooth.sdk.protobuf.TpUnregisterRequest;
+import sawtooth.sdk.protobuf.TransactionHeader;
 
 /** Sawtooth transaction processor. */
 public class TransactionProcessor implements Runnable {
