@@ -14,8 +14,13 @@ public class DHTest {
         String address = "localhost";
         int port = 5555;
 
-        HyperZMQ hzmqServer = new HyperZMQ("server", "password", true);
-        HyperZMQ hzmqClient = new HyperZMQ("client", "password", true);
+        HyperZMQ hzmqServer = new HyperZMQ.Builder("server", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ hzmqClient = new HyperZMQ.Builder("client", "password", null)
+                .createNewIdentity(true)
+                .build();
 
         FutureTask<EncryptedStream> server = new FutureTask<EncryptedStream>(new DHKeyExchange("server",
                 hzmqServer.getSawtoothSigner(),

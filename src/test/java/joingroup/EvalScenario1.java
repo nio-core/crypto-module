@@ -37,17 +37,21 @@ public class EvalScenario1 {
     @Test
     public void test() throws InterruptedException {
         // Client setup
-        HyperZMQ client1 = new HyperZMQ("client1", "password", true);
-        client1.setPrivateKey(PRIVATE_1);
+        HyperZMQ client1 = new HyperZMQ.Builder("client1", "password", null)
+                .setIdentity(PRIVATE_1)
+                .build();
 
-        HyperZMQ client2 = new HyperZMQ("client2", "password", true);
-        client2.setPrivateKey(PRIVATE_2);
+        HyperZMQ client2 = new HyperZMQ.Builder("client2", "password", null)
+                .setIdentity(PRIVATE_2)
+                .build();
 
-        HyperZMQ client3 = new HyperZMQ("client3", "password", true);
-        client3.setPrivateKey(PRIVATE_3);
+        HyperZMQ client3 = new HyperZMQ.Builder("client3", "password", null)
+                .setIdentity(PRIVATE_3)
+                .build();
 
-        HyperZMQ client4 = new HyperZMQ("client4", "password", true);
-        client4.setPrivateKey(PRIVATE_4);
+        HyperZMQ client4 = new HyperZMQ.Builder("client4", "password", null)
+                .setIdentity(PRIVATE_4)
+                .build();
 
         // Setup for voting - just vote YES
         client1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
