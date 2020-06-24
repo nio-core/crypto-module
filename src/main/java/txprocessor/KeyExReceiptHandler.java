@@ -4,6 +4,7 @@ import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.processor.Context;
@@ -52,19 +54,31 @@ public class KeyExReceiptHandler implements TransactionHandler {
 
     public void apply(TpProcessRequest transactionRequest, Context state) throws InvalidTransactionException, InternalError {
         // Payload is expected to be of KeyExchangeReceipt.class
-        String s = transactionRequest.getPayload().toString(UTF_8);
-        print("Got payload: " + s);
-        if (s == null || s.isEmpty()) {
+        String payloadStr = transactionRequest.getPayload().toString(UTF_8);
+        print("Got payload: " + payloadStr);
+        if (payloadStr == null || payloadStr.isEmpty()) {
             print("Empty payload!");
             throw new InvalidTransactionException("Empty payload!");
         }
 
+        // DEBUG FUNCTION //
+        if (payloadStr.contains("CLEARALL,")) {
+            String[] parts = payloadStr.split(",");
+            if (parts.length > 1) {
+                String addr = SawtoothUtils.namespaceHashAddress(namespace, parts[1]);
+                print("[DEBUG] clearing contents of " + parts[1] + " at address " + addr);
+                TPUtils.writeToAddress("", addr, state);
+                return;
+            }
+        }
+        // END DEBUG FUNCTION //
+
         KeyExchangeReceipt receipt;
         try {
-            receipt = new Gson().fromJson(s, KeyExchangeReceipt.class);
+            receipt = new Gson().fromJson(payloadStr, KeyExchangeReceipt.class);
         } catch (JsonSyntaxException e) {
-            print("Malformed payload: " + s);
-            throw new InvalidTransactionException("Malformed payload: " + s);
+            print("Malformed payload: " + payloadStr);
+            throw new InvalidTransactionException("Malformed payload: " + payloadStr);
         }
 
         // Verify the member that shared a key is the one that submitted the KeyExchangeReceipt

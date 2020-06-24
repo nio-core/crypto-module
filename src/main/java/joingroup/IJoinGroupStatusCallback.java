@@ -23,7 +23,7 @@ public interface IJoinGroupStatusCallback {
     final static int NO_CONTACT_FOUND = 200000;
     final static int VOTE_DENIED = 200001;
     final static int EMPTY_RESPONSE = 200002;
-    final static int TIMEOUT = 200000;
+    final static int TIMEOUT = 200003;
 
     void joinGroupStatusCallback(int code, String info);
 }

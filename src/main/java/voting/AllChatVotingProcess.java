@@ -3,11 +3,13 @@ package voting;
 import blockchain.IAllChatReceiver;
 import blockchain.SawtoothUtils;
 import client.HyperZMQ;
+
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import util.Utilities;
 
 public class AllChatVotingProcess implements IVotingProcess, IAllChatReceiver {
@@ -24,7 +26,7 @@ public class AllChatVotingProcess implements IVotingProcess, IAllChatReceiver {
 
     @Override
     public VotingResult vote(VotingMatter votingMatter, int timeInMs) {
-        System.out.println("[" + Thread.currentThread().getId() + "] [AllChatVotingProcess]  STARTING");
+        System.out.println("[" + Thread.currentThread().getId() + "] [AllChatVotingProcess]  STARTING -- desired voters: " + votingMatter.getDesiredVoters().toString());
         // Prepare to aggregate the result
         result = new VotingResult(votingMatter, new ArrayList<>());
 
@@ -59,7 +61,7 @@ public class AllChatVotingProcess implements IVotingProcess, IAllChatReceiver {
     public void allChatMessageReceived(String message, String sender) {
         // This is called from the EventReceiver thread
         // Put the votes from here in the queue of the main thread
-
+        System.out.println("NEW ALLCHAT MESSAGE: " + message + " from " + sender);
         Vote vote = Utilities.deserializeMessage(message, Vote.class);
         if (vote != null) {
             if (!vote.getVotingMatterHash().equals(this.result.getVotingMatter().getHash())) {

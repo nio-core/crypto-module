@@ -18,6 +18,7 @@ import groups.GroupMessage;
 import groups.IGroupCallback;
 import groups.IGroupVoteReceiver;
 import groups.MessageType;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import joingroup.IJoinGroupStatusCallback;
 import joingroup.JoinRequest;
 import keyexchange.KeyExchangeReceipt;
@@ -102,7 +104,7 @@ public class HyperZMQ implements AutoCloseable {
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
         this.pingHandler = new PingHandler(this);
-        registerClient();
+        // registerClient();
     }
 
     /**
@@ -116,10 +118,10 @@ public class HyperZMQ implements AutoCloseable {
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
         this.pingHandler = new PingHandler(this);
-        registerClient();
+        // registerClient();
     }
 
-    private void registerClient() {
+    public void registerClient() {
         // Upon startup, send KeyExchangeReceipt for AllChat to have this client added the NetworkMembers list
         KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(getSawtoothPublicKey(),
                 getSawtoothPublicKey(),
@@ -1008,11 +1010,15 @@ public class HyperZMQ implements AutoCloseable {
         // Only check for votingMatter type messages to handle automatically
         // Vote type messages should be passed to all registered receivers because they might use it for
         // custom voting processes
-        VotingMatter votingMatter = Utilities.deserializeMessage(message, VotingMatter.class);
-        if (votingMatter != null) {
-            voteManager.addVoteRequired(votingMatter);
+
+        if (message.contains("voteDirectorPublicKey") && message.contains("desiredVoters")) {
+            VotingMatter votingMatter = Utilities.deserializeMessage(message, VotingMatter.class);
+            if (votingMatter != null) {
+                voteManager.addVoteRequired(votingMatter);
+            }
         } else {
             // Default procedure - notify all
+            System.out.println("NOTIFIYING ALLCHAT RECEIVERS");
             for (IAllChatReceiver receiver : allChatReceivers) {
                 receiver.allChatMessageReceived(message, sender);
             }

@@ -4,6 +4,7 @@ import blockchain.SawtoothUtils;
 import client.NetworkJoinManager;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -12,6 +13,7 @@ import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Map;
+
 import joingroup.JoinRequest;
 import messages.JNChallengeMessage;
 import messages.JNResponseMessage;
@@ -75,11 +77,7 @@ public class JNApplicantThread implements Runnable {
         }
         pubSocket.send(joinRequest.toString(), NetworkJoinManager.JOIN_SAWTOOTH_NETWORK_TOPIC);
         print("Sent join request");
-        /*
-        for (int i = 0; i < 6; i++) {
 
-        }
-        */
         pubSocket.disconnect();
 
         // Im the server
@@ -125,9 +123,10 @@ public class JNApplicantThread implements Runnable {
             if ("OK!!!".equals(s)) {
                 DHKeyExchange exchange = new DHKeyExchange(myID,
                         mySigner,
-                        joinRequest.getApplicantPublicKey(),
+                        challenge.getMemberPublicKey(),
                         joinRequest.getAddress(),
                         joinRequest.getPort(), true);
+
                 EncryptedStream encryptedStream = null;
                 try {
                     encryptedStream = exchange.call();
@@ -142,7 +141,6 @@ public class JNApplicantThread implements Runnable {
 
 
             }
-            // TODO if ok authenticated - setup server again to listen for vote result
 
 
         } catch (IOException e) {
