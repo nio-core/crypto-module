@@ -170,14 +170,17 @@ public class VoteManager {
                 if (process != null) {
                     // Select the participants
                     print("Selecting participants for vote...");
+                    String groupToGet = joinRequest.getType().equals(JoinRequestType.GROUP) ?
+                            joinRequest.getGroupName() :  HyperZMQ.JOIN_NETWORK_VOTE_GROUP;
+                    List<String> groupMembers = hyperZMQ.getGroupMembersFromReceipts(groupToGet);
 
-                    List<String> groupMembers;
-                    if (joinRequest.getType().equals(JoinRequestType.GROUP)) {
+                    /*if (joinRequest.getType().equals(JoinRequestType.GROUP)) {
                         groupMembers = hyperZMQ.getGroupMembersFromReceipts(joinRequest.getGroupName());
                     } else {
-                        groupMembers = hyperZMQ.getNetworkMembers();
-                    }
-                    // Let self vote 7
+                        groupMembers = hyperZMQ.();
+                    } */
+
+                    // Let self vote
                     if (groupMembers.size() > votingParticipantsThreshold) {
                         if (subgroupSelector == null) {
                             throw new IllegalStateException("No SubGroupSelector available but is required.");

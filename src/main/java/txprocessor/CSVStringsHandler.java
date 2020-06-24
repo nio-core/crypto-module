@@ -19,6 +19,7 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
+import txprocessor.TPUtils;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -26,7 +27,7 @@ public class CSVStringsHandler implements TransactionHandler {
     private final String namespace = "2f9d35";
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
-    CSVStringsHandler() {
+    public CSVStringsHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
         print("Starting CSVStringsTP with namespace '" + namespace + "'");

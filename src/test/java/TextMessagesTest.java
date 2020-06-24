@@ -1,5 +1,4 @@
-package client;
-
+import client.HyperZMQ;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,9 +41,18 @@ public class TextMessagesTest {
     public void testMultiGroup() {
         //CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "client2.jks", "drowssap", null, true);
-        HyperZMQ client3 = new HyperZMQ("Client3", "client3.jks", "drowssap", null, true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client3 = new HyperZMQ.Builder("Client3", "password", null)
+                .createNewIdentity(true)
+                .build();
+
         AtomicBoolean send12 = new AtomicBoolean(false);
         AtomicBoolean send13 = new AtomicBoolean(false);
         client1.createGroup("group12");
@@ -81,9 +89,17 @@ public class TextMessagesTest {
         // CSVStringsTP.main(null);
         //sleep(1000);
 
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "drowssap", true);
-        HyperZMQ failingClient = new HyperZMQ("ClientFail", "testtset", true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ failingClient = new HyperZMQ.Builder("ClientFail", "password", null)
+                .createNewIdentity(true)
+                .build();
 
         client1.createGroup(TESTGROUP);
         AtomicBoolean c1received = new AtomicBoolean(false);
@@ -131,8 +147,14 @@ public class TextMessagesTest {
     public void testMultiMessage() throws InterruptedException {
         // CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "client2.jks", "drowssap", null, true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
         client1.createGroup(TESTGROUP);
         client2.addGroup(TESTGROUP, client1.getKeyForGroup(TESTGROUP));
 

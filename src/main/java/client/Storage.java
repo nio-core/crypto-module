@@ -118,11 +118,13 @@ class Storage {
             // TODO add even more passwords?
             KeyStore.PasswordProtection protParam = new KeyStore.PasswordProtection(new char[]{'x'});
             data.forEach((groupName, key) -> {
-                KeyStore.SecretKeyEntry entry = new KeyStore.SecretKeyEntry(key);
-                try {
-                    ks.setEntry(groupName, entry, protParam);
-                } catch (KeyStoreException e) {
-                    e.printStackTrace();
+                if (groupName != null && key != null) {
+                    KeyStore.SecretKeyEntry entry = new KeyStore.SecretKeyEntry(key);
+                    try {
+                        ks.setEntry(groupName, entry, protParam);
+                    } catch (KeyStoreException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
 

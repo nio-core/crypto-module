@@ -10,6 +10,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
@@ -48,9 +49,9 @@ public class Crypto {
      * @param password     password of the keystore
      * @param createNew    whether to create a new keystore
      */
-    Crypto(HyperZMQ hyperZMQ, String keystorePath, char[] password, String dataFilePath, boolean createNew) {
+    Crypto(HyperZMQ hyperZMQ, @Nullable String keystorePath, char[] password, @Nullable String dataFilePath, boolean createNew) {
         this.keyStorePass = password;
-        this.pathToKeyStore = keystorePath;
+        this.pathToKeyStore = keystorePath != null ? keystorePath : DEFAULT_KEYSTORE_PATH;
         this.hyperZMQ = hyperZMQ;
         this.storage = new Storage(pathToKeyStore, keyStorePass, dataFilePath);
         if (createNew) {
@@ -58,16 +59,6 @@ public class Crypto {
         } else {
             load();
         }
-    }
-
-    /**
-     * Create a instance which loads the KeyStore and DataFile from the default path.
-     *
-     * @param password  password of the keystore
-     * @param createNew whether to create a new keystore
-     */
-    Crypto(HyperZMQ hyperZMQ, char[] password, boolean createNew) {
-        this(hyperZMQ, DEFAULT_KEYSTORE_PATH, password, null, createNew);
     }
 
     /**

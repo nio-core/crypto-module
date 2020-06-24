@@ -93,46 +93,43 @@ public class EventHandler implements AutoCloseable {
                         for (Event e : list.getEventsList()) {
                             String received = e.toString();
                             //print("Received Event: " + received);
-                            if (e.getEventType().equals("AllChat")) {
-                                hyperzmq.handleAllChatMessage(e.getData().toStringUtf8(), e.getAttributes(0).getValue());
-                            } else {
-                                // Group Messages (CSVStrings)
-                                // Check whether the event is a new encrypted message or a JoinGroup request
-                                // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address
-                                // Because JoinRequests are not written to the blockchain
-                                Event.Attribute attr = e.getAttributes(0);
-                                if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
-                                    JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
-                                    if (request != null) {
-                                        print("Received JoinGroupRequest: " + request.toString());
+                            // Group Messages (CSVStrings)
+                            // Check whether the event is a new encrypted message or a JoinGroup request
+                            // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address
+                            // Because JoinRequests are not written to the blockchain
+                            Event.Attribute attr = e.getAttributes(0);
+                            if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
+                                JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
+                                if (request != null) {
+                                    print("Received JoinGroupRequest: " + request.toString());
 
-                                        // Check if we are responsible for the request
-                                        if (!request.getContactPublicKey().equals(hyperzmq.getSawtoothPublicKey())) {
-                                            print("This client is not responsible for the request");
-                                            continue;
-                                        }
-
-                                        // Check if we can access the requested key beforehand
-                                        Objects.requireNonNull(hyperzmq.getKeyForGroup(request.getGroupName()),
-                                                "Client does not have the key that was requested!");
-
-                                        // Pass control to VoteManager
-                                        hyperzmq.getVoteManager().addJoinRequest(request);
+                                    // Check if we are responsible for the request
+                                    if (!request.getContactPublicKey().equals(hyperzmq.getSawtoothPublicKey())) {
+                                        print("This client is not responsible for the request");
                                         continue;
                                     }
-                                }
-                                //-----------------------------------------------------------------------------------
-                                //  Handle Group Messages (Normal message, Contract, VotingMatter, Vote)
-                                //  Filter for VotingMatter and Vote to put those in the corresponding queues
-                                //-----------------------------------------------------------------------------------
 
-                                GroupMessage groupMessage = Utilities.deserializeMessage(e.getData().toStringUtf8(), GroupMessage.class);
-                                if (groupMessage != null) {
-                                    hyperzmq.newEventReceived(groupMessage.group, groupMessage.payload);
-                                } else {
-                                    print("Deserialization failed!");
+                                    // Check if we can access the requested key beforehand
+                                    Objects.requireNonNull(hyperzmq.getKeyForGroup(request.getGroupName()),
+                                            "Client does not have the key that was requested!");
+
+                                    // Pass control to VoteManager
+                                    hyperzmq.getVoteManager().addJoinRequest(request);
+                                    continue;
                                 }
                             }
+                            //-----------------------------------------------------------------------------------
+                            //  Handle Group Messages (Normal message, Contract, VotingMatter, Vote)
+                            //  Filter for VotingMatter and Vote to put those in the corresponding queues
+                            //-----------------------------------------------------------------------------------
+
+                            GroupMessage groupMessage = Utilities.deserializeMessage(e.getData().toStringUtf8(), GroupMessage.class);
+                            if (groupMessage != null) {
+                                hyperzmq.newEventReceived(groupMessage.group, groupMessage.payload);
+                            } else {
+                                print("Deserialization failed!");
+                            }
+
                         }
                         break;
                     }

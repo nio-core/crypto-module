@@ -71,11 +71,12 @@ public class HyperZMQ implements AutoCloseable {
     // Outlets for messages of Vote type received in groups
     private final List<IGroupVoteReceiver> groupVoteReceivers = new ArrayList<>();
 
-    // Outlets for messages received in allchat
-    private final List<IAllChatReceiver> allChatReceivers = new ArrayList<>();
+    // This group is responsible for voting if an applicant may join the network
+    // To join this group, the usual voting process is done
+    static final String JOIN_NETWORK_VOTE_GROUP = "JoinNetworkVoters";
 
     // All group names in this array are reserved and cannot be used to create a new group
-    private static final List<String> reservedGroupNames = Arrays.asList("AllChat");
+    private static final List<String> reservedGroupNames = Arrays.asList(JOIN_NETWORK_VOTE_GROUP);
 
     // if this is set, passes all contract messages received in a group to all callbacks that are registered
     // also invokes the group callback with ContractReceipt additionally to the ReceiptCallback
@@ -87,6 +88,9 @@ public class HyperZMQ implements AutoCloseable {
 
     private final PingHandler pingHandler;
 
+    // This is unused for debug purposes. To use this, change occurrences ValidatorAddress.class to use this instead
+    private final String validatorAddress;
+
     /**
      * @param id               id
      * @param pathToKeyStore   path to a keystore file including .jks
@@ -94,42 +98,56 @@ public class HyperZMQ implements AutoCloseable {
      * @param createNewStore   whether a new keystore should be created, if true a new signer (=blockchain identity)
      *                         and encryption key will be created
      */
-    public HyperZMQ(String id, String pathToKeyStore, String keystorePassword, String dataFilePath, boolean createNewStore) {
+    private HyperZMQ(String id, @Nullable String pathToKeyStore, String keystorePassword, @Nullable String dataFilePath, boolean createNewStore, String validatorAddress) {
         this.clientID = id;
-        //_crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), createNewStore);
-
         this.crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
         this.eventHandler = new EventHandler(this);
         this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
         this.pingHandler = new PingHandler(this);
-        // registerClient();
+        this.validatorAddress = validatorAddress;
     }
 
-    /**
-     * Using the default keystore file path
-     */
-    public HyperZMQ(String id, String keystorePassword, boolean createNewStore) {
-        this.clientID = id;
-        this.crypto = new Crypto(this, keystorePassword.toCharArray(), createNewStore);
-        this.eventHandler = new EventHandler(this);
-        this.blockchainHelper = new BlockchainHelper(this);
-        this.voteManager = new VoteManager(this);
-        this.messageFactory = new MessageFactory(getSawtoothSigner());
-        this.pingHandler = new PingHandler(this);
-        // registerClient();
-    }
+    public static class Builder {
+        String id, keyStorePath = null, keyStorePassword, dataFilePath = null, validatorAddress;
+        String customIdentity = null;
+        boolean createNewCrypto = true; // TODO change this default in production
 
-    public void registerClient() {
-        // Upon startup, send KeyExchangeReceipt for AllChat to have this client added the NetworkMembers list
-        KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(getSawtoothPublicKey(),
-                getSawtoothPublicKey(),
-                ReceiptType.JOIN_NETWORK,
-                null,
-                System.currentTimeMillis());
+        public Builder(String id, String keyStorePassword, String validatorAddress) {
+            this.id = id;
+            this.keyStorePassword = keyStorePassword;
+            this.validatorAddress = validatorAddress;
+        }
 
-        sendKeyExchangeReceipt(receipt);
+        public Builder setKeyStorePath(String keyStorePath) {
+            this.keyStorePath = keyStorePath;
+            return this;
+        }
+
+        public Builder setDataFilePath(String dataFilePath) {
+            this.dataFilePath = dataFilePath;
+            return this;
+        }
+
+        public Builder createNewIdentity(boolean value) {
+            this.createNewCrypto = value;
+            return this;
+        }
+
+        // Debug function - overwrites any loaded or newly created identity (private+public key)
+        public Builder setIdentity(String privateKeyHex) {
+            this.customIdentity = privateKeyHex;
+            return this;
+        }
+
+        public HyperZMQ build() {
+            HyperZMQ tmp = new HyperZMQ(this.id, this.keyStorePath, this.keyStorePassword, this.dataFilePath, this.createNewCrypto, this.validatorAddress);
+            if (customIdentity != null && !customIdentity.isEmpty()) {
+                tmp.setPrivateKey(customIdentity);
+            }
+            return tmp;
+        }
     }
 
     /**
@@ -781,15 +799,6 @@ public class HyperZMQ implements AutoCloseable {
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
-    public ArrayList<String> getNetworkMembers() {
-        String address = SawtoothUtils.namespaceHashAddress(BlockchainHelper.KEY_EXCHANGE_RECEIPT_NAMESPACE, "AllChat");
-        print("Getting members of network at address " + address);
-        String resp = blockchainHelper.getStateZMQ(address);
-        if (resp == null) return null;
-        //print("getGroupMembers: " + resp);
-        return new ArrayList<>(Arrays.asList(resp.split(",")));
-    }
-
     /**
      * Send a ping in the group and collect ping responses for the given time.
      * This method blocks for at least the given time.
@@ -1006,25 +1015,6 @@ public class HyperZMQ implements AutoCloseable {
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
-    public void handleAllChatMessage(String message, String sender) {
-        // Only check for votingMatter type messages to handle automatically
-        // Vote type messages should be passed to all registered receivers because they might use it for
-        // custom voting processes
-
-        if (message.contains("voteDirectorPublicKey") && message.contains("desiredVoters")) {
-            VotingMatter votingMatter = Utilities.deserializeMessage(message, VotingMatter.class);
-            if (votingMatter != null) {
-                voteManager.addVoteRequired(votingMatter);
-            }
-        } else {
-            // Default procedure - notify all
-            System.out.println("NOTIFIYING ALLCHAT RECEIVERS");
-            for (IAllChatReceiver receiver : allChatReceivers) {
-                receiver.allChatMessageReceived(message, sender);
-            }
-        }
-    }
-
     /**
      * Encapsulate the call on the callback that is possibly null.
      * If it is null this method does nothing
@@ -1087,17 +1077,5 @@ public class HyperZMQ implements AutoCloseable {
 
     public void removeGroupVoteReceiver(IGroupVoteReceiver groupVoteReceiver) {
         this.groupVoteReceivers.remove(groupVoteReceiver);
-    }
-
-    public List<IAllChatReceiver> getAllChatReceivers() {
-        return allChatReceivers;
-    }
-
-    public void addAllChatReceiver(IAllChatReceiver obj) {
-        this.allChatReceivers.add(obj);
-    }
-
-    public void remoteAllChatReceiver(IAllChatReceiver obj) {
-        this.allChatReceivers.remove(obj);
     }
 }
