@@ -29,3 +29,4 @@ data.dat
 *.iml
 target/
 *.jks
+src/main/java/blockchain/ValidatorAddress.java

@@ -88,6 +88,14 @@ public class BlockchainHelper {
                 null);
     }
 
+    public Transaction keyExchangeReceiptTransaction(String payload) {
+        Objects.requireNonNull(payload);
+        return buildTransaction(BlockchainHelper.KEY_EXCHANGE_RECEIPT_FAMILY,
+                "0.1",
+                payload.toString().getBytes(UTF_8),
+                null);
+    }
+
     private Transaction buildTransaction(String transactionFamily, String txFamVersion, byte[] payload) {
         return buildTransaction(transactionFamily, txFamVersion, payload, null);
     }

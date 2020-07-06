@@ -5,6 +5,7 @@ import diffiehellman.EncryptedStream;
 import groups.Envelope;
 import groups.GroupMessage;
 import groups.MessageType;
+
 import java.net.ConnectException;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
+
 import joingroup.JoinRequest;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
@@ -171,7 +173,7 @@ public class VoteManager {
                     // Select the participants
                     print("Selecting participants for vote...");
                     String groupToGet = joinRequest.getType().equals(JoinRequestType.GROUP) ?
-                            joinRequest.getGroupName() :  HyperZMQ.JOIN_NETWORK_VOTE_GROUP;
+                            joinRequest.getGroupName() : HyperZMQ.JOIN_NETWORK_VOTE_GROUP;
                     List<String> groupMembers = hyperZMQ.getGroupMembersFromReceipts(groupToGet);
 
                     /*if (joinRequest.getType().equals(JoinRequestType.GROUP)) {

@@ -3,6 +3,7 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
 import groups.GroupMessage;
+
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -11,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import joingroup.JoinRequest;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -101,17 +103,22 @@ public class EventHandler implements AutoCloseable {
                             if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
                                 JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
                                 if (request != null) {
-                                    print("Received JoinGroupRequest: " + request.toString());
+                                    //print("Received JoinGroupRequest: " + request.toString());
 
                                     // Check if we are responsible for the request
                                     if (!request.getContactPublicKey().equals(hyperzmq.getSawtoothPublicKey())) {
-                                        print("This client is not responsible for the request");
+                                        // print("This client is not responsible for the request");
                                         continue;
                                     }
 
                                     // Check if we can access the requested key beforehand
-                                    Objects.requireNonNull(hyperzmq.getKeyForGroup(request.getGroupName()),
-                                            "Client does not have the key that was requested!");
+                                    if (!hyperzmq.isGroupAvailable(request.getGroupName())) {
+                                        print("Client does not have the key that was requested!");
+                                        continue;
+                                    }
+
+                                    // Objects.requireNonNull(hyperzmq.getKeyForGroup(request.getGroupName()),
+                                    //       "Client does not have the key that was requested!");
 
                                     // Pass control to VoteManager
                                     hyperzmq.getVoteManager().addJoinRequest(request);

@@ -1,10 +1,15 @@
 package joingroup;
 
 import client.HyperZMQ;
+
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.Assert;
 import org.junit.Test;
+import subgrouping.RandomSubgroupSelector;
 import voting.GroupInternVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
@@ -27,6 +32,58 @@ public class EvalScenario1 {
     AtomicBoolean c2Joined = new AtomicBoolean(false);
     AtomicBoolean c3Joined = new AtomicBoolean(false);
     AtomicBoolean c4Joined = new AtomicBoolean(false);
+    private AtomicBoolean finished = new AtomicBoolean(false);
+
+
+    @Test
+    public void measureTime() throws InterruptedException {
+        String group = "superGroup";
+        int numOfRuns = 20; // TODO try 999999999 clients
+        List<Long> times = new ArrayList<>();
+
+        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password", null)
+                .setIdentity(PRIVATE_1)
+                .build();
+        originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        originalClient.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(originalClient));
+        originalClient.getVoteManager().setVoteEvaluator(
+                new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
+
+        // TODO test with selection before voting
+        originalClient.getVoteManager().setVotingParticipantsThreshold(5);
+        originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
+
+        originalClient.debugClearGroupMembers(group);
+
+        Thread.sleep(1000);
+
+        originalClient.createGroup(group);
+
+        Thread.sleep(1000);
+
+        for (int i = 0; i < numOfRuns; i++) {
+            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password", null)
+                    .createNewIdentity(true)
+                    .build();
+            tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
+            Thread.sleep(500);
+
+            long startTime = System.currentTimeMillis();
+
+            tmp.tryJoinGroup(group, "localhost", (5555 + i), Collections.emptyMap(), (code, info) -> {
+                if (code == IJoinGroupStatusCallback.KEY_RECEIVED) {
+                    finished.set(true);
+                }
+            }, PUBLIC_1); // Explicitly let the original client do the voting - saves a lot of boilerplate code here
+            while (!finished.get()) {
+            }
+            long endTime = System.currentTimeMillis() - startTime;
+            finished.set(false);
+            times.add(endTime);
+        }
+
+        System.out.println("[TEST] Times: " + times.toString());
+    }
 
     /**
      * We have 4 clients that form a group

@@ -837,7 +837,7 @@ public class HyperZMQ implements AutoCloseable {
         print("Getting members of group '" + groupName + "' at address " + address);
         String resp = blockchainHelper.getStateZMQ(address);
         if (resp == null) return null;
-        //print("getGroupMembers: " + resp);
+        print("getGroupMembers: " + resp);
         return new ArrayList<>(Arrays.asList(resp.split(",")));
     }
 
@@ -871,41 +871,13 @@ public class HyperZMQ implements AutoCloseable {
         messageFactory.setSigner(new Signer(new Secp256k1Context(), new Secp256k1PrivateKey(SawtoothUtils.hexDecode(privateKeyHex))));
     }
 
-    public Signer getSawtoothSigner() {
-        return crypto.getSigner();
+    public void debugClearGroupMembers(String group) {
+        Transaction t = blockchainHelper.keyExchangeReceiptTransaction("CLEARALL," + group);
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
-    public void tryJoinGroup2(@Nonnull String groupName, @Nonnull String address, @Nonnull int port, @Nullable Map<String, String> additionalInfo,
-                              @Nullable IJoinGroupStatusCallback callback, @Nullable String contactPublicKey) {
-        Objects.requireNonNull(groupName);
-        String realContactKey = contactPublicKey;
-        if (realContactKey == null) {
-            // If no contact is given, get the client responsible for the group by checking the entry
-            List<String> members = getGroupMembersFromReceipts(groupName);
-            if (members.isEmpty()) {
-                notifyCallback(IJoinGroupStatusCallback.NO_CONTACT_FOUND,
-                        "No contact could be found from the blockchain", callback);
-                print(groupName + " does not have any members. Try creating the group.");
-                return;
-            }
-
-            realContactKey = members.get(members.size() - 1); // Last one to join the group is responsible
-        }
-        notifyCallback(IJoinGroupStatusCallback.FOUND_CONTACT, realContactKey, callback);
-
-        JoinRequest request = new JoinRequest(getSawtoothPublicKey(),
-                realContactKey,
-                JoinRequestType.GROUP,
-                groupName,
-                additionalInfo,
-                address,
-                port);
-
-        Transaction transaction = blockchainHelper.
-                csvStringsTransaction(request.toString().getBytes(UTF_8));
-
-        blockchainHelper.buildAndSendBatch(Collections.singletonList(transaction));
-        notifyCallback(IJoinGroupStatusCallback.REQUEST_SENT, request.toString(), callback);
+    public Signer getSawtoothSigner() {
+        return crypto.getSigner();
     }
 
     public void waitForResponse(String address, int port, String realContactKey) {
@@ -916,6 +888,7 @@ public class HyperZMQ implements AutoCloseable {
                 EncryptedStream stream = exchange.call();
                 String s = stream.readLine();
                 System.out.println("Received from encrypted stream: " + s);
+                stream.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
