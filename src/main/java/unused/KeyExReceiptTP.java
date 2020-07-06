@@ -1,7 +1,8 @@
-package txprocessor;
+package unused;
 
 import blockchain.ValidatorAddress;
 import sawtooth.sdk.processor.TransactionProcessor;
+import txprocessor.KeyExReceiptHandler;
 
 public class KeyExReceiptTP {
 

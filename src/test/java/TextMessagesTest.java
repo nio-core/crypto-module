@@ -1,13 +1,12 @@
-package client;
-
-import org.junit.Test;
-import txprocessor.CSVStringsTP;
-
+import client.HyperZMQ;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * -Djava.util.logging.SimpleFormatter.format="%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS %4$s %2$s %5$s%6$s%n"
@@ -42,9 +41,18 @@ public class TextMessagesTest {
     public void testMultiGroup() {
         //CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "client2.jks", "drowssap", null, true);
-        HyperZMQ client3 = new HyperZMQ("Client3", "client3.jks", "drowssap", null, true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client3 = new HyperZMQ.Builder("Client3", "password", null)
+                .createNewIdentity(true)
+                .build();
+
         AtomicBoolean send12 = new AtomicBoolean(false);
         AtomicBoolean send13 = new AtomicBoolean(false);
         client1.createGroup("group12");
@@ -77,13 +85,21 @@ public class TextMessagesTest {
     }
 
     @Test
-    public void testReadWriteToChain() {
+    public void testReadWriteToChain() throws InterruptedException {
         // CSVStringsTP.main(null);
         //sleep(1000);
 
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "drowssap", true);
-        HyperZMQ failingClient = new HyperZMQ("ClientFail", "testtset", true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ failingClient = new HyperZMQ.Builder("ClientFail", "password", null)
+                .createNewIdentity(true)
+                .build();
 
         client1.createGroup(TESTGROUP);
         AtomicBoolean c1received = new AtomicBoolean(false);
@@ -91,6 +107,7 @@ public class TextMessagesTest {
         String key = client1.getKeyForGroup(TESTGROUP);
         client2.addGroup(TESTGROUP, key);
 
+        Thread.sleep(500);
         // The client receives its own messages because it subscribed to the group
         client1.addCallbackToGroup(TESTGROUP, ((group, message, sender) -> {
             System.out.println("[Client1] received: group=" + group + ", message=" + message + ", sender=" + sender);
@@ -130,8 +147,14 @@ public class TextMessagesTest {
     public void testMultiMessage() throws InterruptedException {
         // CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ("Client1", "password", true);
-        HyperZMQ client2 = new HyperZMQ("Client2", "client2.jks", "drowssap", null, true);
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+                .createNewIdentity(true)
+                .build();
+
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+                .createNewIdentity(true)
+                .build();
+
         client1.createGroup(TESTGROUP);
         client2.addGroup(TESTGROUP, client1.getKeyForGroup(TESTGROUP));
 

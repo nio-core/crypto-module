@@ -1,11 +1,14 @@
 package txprocessor;
 
 import com.google.protobuf.ByteString;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
-
-import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 

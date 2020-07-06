@@ -5,6 +5,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.processor.Context;
@@ -15,8 +22,6 @@ import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.signing.PublicKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PublicKey;
-
-import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -47,24 +52,34 @@ public class KeyExReceiptHandler implements TransactionHandler {
 
     public void apply(TpProcessRequest transactionRequest, Context state) throws InvalidTransactionException, InternalError {
         // Payload is expected to be of KeyExchangeReceipt.class
-        String s = transactionRequest.getPayload().toString(UTF_8);
-        print("Got payload: " + s);
-        if (s == null || s.isEmpty()) {
+        String payloadStr = transactionRequest.getPayload().toString(UTF_8);
+        print("Got payload: " + payloadStr);
+        if (payloadStr == null || payloadStr.isEmpty()) {
             print("Empty payload!");
             throw new InvalidTransactionException("Empty payload!");
         }
 
+        // DEBUG FUNCTION //
+        if (payloadStr.contains("CLEARALL,")) {
+            String[] parts = payloadStr.split(",");
+            if (parts.length > 1) {
+                String addr = SawtoothUtils.namespaceHashAddress(namespace, parts[1]);
+                print("[DEBUG] clearing contents of " + parts[1] + " at address " + addr);
+                TPUtils.writeToAddress("", addr, state);
+                return;
+            }
+        }
+        // END DEBUG FUNCTION //
+
         KeyExchangeReceipt receipt;
         try {
-            receipt = new Gson().fromJson(s, KeyExchangeReceipt.class);
+            receipt = new Gson().fromJson(payloadStr, KeyExchangeReceipt.class);
         } catch (JsonSyntaxException e) {
-            print("Malformed payload: " + s);
-            throw new InvalidTransactionException("Malformed payload: " + s);
+            print("Malformed payload: " + payloadStr);
+            throw new InvalidTransactionException("Malformed payload: " + payloadStr);
         }
 
         // Verify the member that shared a key is the one that submitted the KeyExchangeReceipt
-        // TODO undo comment around verifications
-
         if (!transactionRequest.getHeader().getSignerPublicKey().equals(receipt.getMemberPublicKey())) {
             print("Member and signer key are different!\nsigner: "
                     + transactionRequest.getHeader().getSignerPublicKey()
@@ -131,6 +146,26 @@ public class KeyExReceiptHandler implements TransactionHandler {
             }
 
             print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
+        } else if (receipt.getReceiptType() == ReceiptType.JOIN_NETWORK) {
+            print("Receipt is of JOIN_NETWORK type, updating members entry...");
+            String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, "AllChat");
+            print("Members address: " + groupAddress);
+            List<String> lEntries = readKeysFromAddress(groupAddress, state);
+            print("Entries at address before update: " + lEntries.toString());
+            print("Adding " + receipt.getApplicantPublicKey());
+            lEntries.add(receipt.getApplicantPublicKey());
+            lEntries.add(receipt.getMemberPublicKey()); // double check, gets removed here vvv if it is already in it
+            String strToWrite = lEntries.stream().distinct().reduce("", (s1, s2) -> {
+                if (s2.isEmpty()) return s1;
+                return s1 += s2 + ",";
+            });
+            strToWrite = strToWrite.substring(0, (strToWrite.length() - 1)); // remove trailing ','
+
+            if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
+                throw new InvalidTransactionException("Unable to update members entry");
+            }
+
+            print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
         }
     }
 
@@ -140,7 +175,7 @@ public class KeyExReceiptHandler implements TransactionHandler {
                 Collections.singletonList(address));
 
         ByteString bsEntry = entries.get(address);
-        return new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
+        return bsEntry == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(bsEntry.toStringUtf8().split(",")));
     }
 
     private void print(String message) {

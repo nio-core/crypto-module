@@ -1,9 +1,8 @@
 package joingroup;
 
 import com.google.gson.Gson;
-import voting.JoinRequestType;
-
 import java.util.Map;
+import voting.JoinRequestType;
 
 public class JoinRequest {
 

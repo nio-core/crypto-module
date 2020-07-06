@@ -2,9 +2,8 @@ package voting;
 
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
-import joingroup.JoinRequest;
-
 import java.util.List;
+import joingroup.JoinRequest;
 
 public class VotingMatter {
 

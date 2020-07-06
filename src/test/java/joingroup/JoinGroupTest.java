@@ -1,32 +1,12 @@
 package joingroup;
 
-import blockchain.SawtoothUtils;
 import client.HyperZMQ;
-import diffiehellman.DHKeyExchange;
-import diffiehellman.EncryptedStream;
-import java.io.IOException;
-import java.sql.Time;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Test;
-import sawtooth.sdk.signing.Context;
-import sawtooth.sdk.signing.PrivateKey;
-import sawtooth.sdk.signing.Secp256k1Context;
-import sawtooth.sdk.signing.Secp256k1PrivateKey;
-import sawtooth.sdk.signing.Signer;
-import subgrouping.RandomSubgroupSelector;
-import voting.GroupInternVotingProcess;
-import voting.JoinRequestType;
-import voting.NoVoteStrategy;
+import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
-import voting.VotingMatter;
 import voting.YesVoteStrategy;
 
 import static org.junit.Assert.assertEquals;
@@ -50,23 +30,24 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
 
     String groupKey;
 
-    /*
-        @Test
-        public void generateKeys() {
-            Context context = new Secp256k1Context();
-            PrivateKey privateKey = context.newRandomPrivateKey();
-            System.out.println(privateKey.hex());
-            System.out.println(context.getPublicKey(privateKey).hex());
-        }
-    */
 
+    /*@Test
+    public void generateKeys() {
+        Context context = new Secp256k1Context();
+        PrivateKey privateKey = context.newRandomPrivateKey();
+        System.out.println(privateKey.hex());
+        System.out.println(context.getPublicKey(privateKey).hex());
+    }
+*/
     @Test
     public void test() throws InterruptedException {
         // Prepare groups
         final String groupName = "testgroup";
 
-        HyperZMQ member1 = new HyperZMQ("member1", "password", true);
-        member1.setPrivateKey(PRIVATE_MEMBER_1);
+        HyperZMQ member1 = new HyperZMQ.Builder("member1", "password", null)
+                .setIdentity(PRIVATE_MEMBER_1)
+                .build();
+
         member1.createGroup(groupName);
         groupKey = member1.getKeyForGroup(groupName);
 
@@ -82,21 +63,24 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
 
         Thread.sleep(1000);
 
-        HyperZMQ member2 = new HyperZMQ("member2", "password", true);
-        member2.setPrivateKey(PRIVATE_MEMBER_2);
+        HyperZMQ member2 = new HyperZMQ.Builder("member2", "password", null)
+                .setIdentity(PRIVATE_MEMBER_2)
+                .build();
+
         // This does not recreate a receipt, as it is not possible in production TODO
         member2.addGroup(groupName, member1.getKeyForGroup(groupName));
 
         // Prepare Voting behavior - member2 should be responsible for the voting
         member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        member2.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(member2, 50));
+        member2.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(member2));
         member2.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member2"));
 
         Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 
         // Start the join process
-        HyperZMQ applicant = new HyperZMQ("applicant", "password", true);
-        applicant.setPrivateKey(PRIVATE_APPLICANT);
+        HyperZMQ applicant = new HyperZMQ.Builder("applicant", "password", null)
+                .setIdentity(PRIVATE_APPLICANT)
+                .build();
 
         Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 

@@ -17,7 +17,6 @@ public class CombinedTP {
         // The handler implements the actual chaincode
         tp.addHandler(new CSVStringsHandler());
         tp.addHandler(new KeyExReceiptHandler());
-        tp.addHandler(new AllChatHandler());
         Thread t = new Thread(tp);
         t.start();
     }

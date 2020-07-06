@@ -1,17 +1,26 @@
 package client;
 
-import org.json.JSONObject;
-
-import javax.annotation.Nonnull;
-import javax.crypto.SecretKey;
-import java.io.*;
-import java.security.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.crypto.SecretKey;
+import org.json.JSONObject;
 
 class Storage {
 
@@ -109,11 +118,13 @@ class Storage {
             // TODO add even more passwords?
             KeyStore.PasswordProtection protParam = new KeyStore.PasswordProtection(new char[]{'x'});
             data.forEach((groupName, key) -> {
-                KeyStore.SecretKeyEntry entry = new KeyStore.SecretKeyEntry(key);
-                try {
-                    ks.setEntry(groupName, entry, protParam);
-                } catch (KeyStoreException e) {
-                    e.printStackTrace();
+                if (groupName != null && key != null) {
+                    KeyStore.SecretKeyEntry entry = new KeyStore.SecretKeyEntry(key);
+                    try {
+                        ks.setEntry(groupName, entry, protParam);
+                    } catch (KeyStoreException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
 

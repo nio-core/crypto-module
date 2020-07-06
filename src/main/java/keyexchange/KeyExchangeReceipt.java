@@ -1,7 +1,6 @@
 package keyexchange;
 
 import com.google.gson.Gson;
-
 import javax.annotation.Nullable;
 
 public class KeyExchangeReceipt implements ISignableMessage {

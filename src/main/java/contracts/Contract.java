@@ -2,12 +2,11 @@ package contracts;
 
 import blockchain.BlockchainHelper;
 import com.google.gson.Gson;
-import sawtooth.sdk.processor.Utils;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import sawtooth.sdk.processor.Utils;
 
 public class Contract {
 

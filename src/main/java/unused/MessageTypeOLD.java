@@ -1,6 +1,6 @@
 package unused;
 
-public enum MessageType {
+public enum MessageTypeOLD {
 
     // "Protocol" Description:
 

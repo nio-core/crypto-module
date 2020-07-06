@@ -1,28 +1,19 @@
 package groups;
 
 import com.google.gson.Gson;
-
-import javax.annotation.Nonnull;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 
 /**
  *
  */
 public class Envelope {
     private final String sender;
-    private final String type;
+    private final MessageType type;
     private final String rawMessage;
     private final String uuid;
 
-    // TODO ENUM
-    // Message types that are possibly received and sent inside a group
-    public static final String MESSAGETYPE_CONTRACT = "contract";
-    public static final String MESSAGETYPE_TEXT = "text";
-    public static final String MESSAGETYPE_CONTRACT_RECEIPT = "contract_receipt";
-    public static final String MESSAGETYPE_VOTING_MATTER = "votingmatter";
-    public static final String MESSAGETYPE_VOTE = "vote";
-
-    public Envelope(@Nonnull String sender, @Nonnull String type, @Nonnull String rawMessage) {
+    public Envelope(@Nonnull String sender, @Nonnull MessageType type, @Nonnull String rawMessage) {
         this.sender = sender;
         this.rawMessage = rawMessage;
         this.type = type;
@@ -33,7 +24,7 @@ public class Envelope {
         return uuid;
     }
 
-    public String getType() {
+    public MessageType getType() {
         return type;
     }
 

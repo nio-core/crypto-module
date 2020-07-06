@@ -3,15 +3,6 @@ package client;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import sawtooth.sdk.signing.PrivateKey;
-import sawtooth.sdk.signing.Secp256k1Context;
-import sawtooth.sdk.signing.Secp256k1PrivateKey;
-import sawtooth.sdk.signing.Signer;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -19,6 +10,15 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import sawtooth.sdk.signing.PrivateKey;
+import sawtooth.sdk.signing.Secp256k1Context;
+import sawtooth.sdk.signing.Secp256k1PrivateKey;
+import sawtooth.sdk.signing.Signer;
 
 import static client.Storage.DATA_ENCRYPTION_KEY_ALIAS;
 import static client.Storage.DEFAULT_KEYSTORE_PATH;
@@ -49,9 +49,9 @@ public class Crypto {
      * @param password     password of the keystore
      * @param createNew    whether to create a new keystore
      */
-    Crypto(HyperZMQ hyperZMQ, String keystorePath, char[] password, String dataFilePath, boolean createNew) {
+    Crypto(HyperZMQ hyperZMQ, @Nullable String keystorePath, char[] password, @Nullable String dataFilePath, boolean createNew) {
         this.keyStorePass = password;
-        this.pathToKeyStore = keystorePath;
+        this.pathToKeyStore = keystorePath != null ? keystorePath : DEFAULT_KEYSTORE_PATH;
         this.hyperZMQ = hyperZMQ;
         this.storage = new Storage(pathToKeyStore, keyStorePass, dataFilePath);
         if (createNew) {
@@ -59,16 +59,6 @@ public class Crypto {
         } else {
             load();
         }
-    }
-
-    /**
-     * Create a instance which loads the KeyStore and DataFile from the default path.
-     *
-     * @param password  password of the keystore
-     * @param createNew whether to create a new keystore
-     */
-    Crypto(HyperZMQ hyperZMQ, char[] password, boolean createNew) {
-        this(hyperZMQ, DEFAULT_KEYSTORE_PATH, password, null, createNew);
     }
 
     /**

@@ -8,13 +8,15 @@ public class AsyncSubSocket implements Runnable {
     private final IAsyncSubSocketCallback callback;
     private final ZContext context;
     private final ZMQ.Socket socket;
+    private final String id;
     private boolean doRun = true;
     private final int receiveTimeoutMS;
     private final String topic;
     private static final boolean doPrint = true;
     private final String address;
 
-    public AsyncSubSocket(IAsyncSubSocketCallback callback, String address, String topic, int receiveTimeoutMS) {
+    public AsyncSubSocket(String id, IAsyncSubSocketCallback callback, String address, String topic, int receiveTimeoutMS) {
+        this.id = id;
         this.callback = callback;
         this.address = address;
         this.topic = topic;
@@ -24,7 +26,11 @@ public class AsyncSubSocket implements Runnable {
         socket.setReceiveTimeOut(receiveTimeoutMS);
 
         socket.connect(address);
-        socket.subscribe(topic.getBytes());
+        if (topic != null) {
+            print("Subscribing: " + topic);
+            socket.subscribe(topic);
+        }
+
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
@@ -56,16 +62,15 @@ public class AsyncSubSocket implements Runnable {
         while (doRun) {
             //print("Receive...");
             String s = socket.recvStr();
-            //print(s);
             if (s != null && !s.isEmpty()) {
-                print(s);
-                callback.newMessage(s.replaceFirst(this.topic + PubSocket.TOPIC_SUFFIX, ""), this.topic);
+                print(s.replaceFirst(this.topic, ""));
+                callback.newMessage(s.replaceFirst(this.topic, ""), this.topic);
             }
         }
     }
 
     void print(String message) {
         if (doPrint)
-            System.out.println("[AsyncSubSocket][" + topic + "][" + address + "] " + message);
+            System.out.println("[" + Thread.currentThread().getId() + "] [AsyncSubSocket][" + id + "][" + address + "] " + message);
     }
 }

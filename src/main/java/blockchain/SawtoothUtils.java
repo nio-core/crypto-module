@@ -2,14 +2,13 @@ package blockchain;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import java.nio.charset.StandardCharsets;
 import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.PublicKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PrivateKey;
 import sawtooth.sdk.signing.Secp256k1PublicKey;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * Collect all Sawtooth related helper methods here,
@@ -31,6 +30,9 @@ public class SawtoothUtils {
 
     /**
      * Build a Sawtooth address from the namespace and a hashable
+     * An address is a hex-encoded 70 character string representing 35 bytes
+     * The address format contains a 3 byte (6 hex character) namespace prefix
+     * The rest of the address format is up to the implementation
      *
      * @param namespace namespace of the transaction family the address is for
      * @param toHash    hashable object which will make up the address

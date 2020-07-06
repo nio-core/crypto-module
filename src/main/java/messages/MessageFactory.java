@@ -1,16 +1,15 @@
 package messages;
 
 import diffiehellman.DHMessage;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import javax.annotation.Nullable;
 import joingroup.JoinRequest;
 import keyexchange.ISignableMessage;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.signing.Signer;
 import voting.JoinRequestType;
-
-import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * This is not a real factory as of the GoF pattern, instead this class is used to centralize the creation of
@@ -19,9 +18,13 @@ import java.util.Map;
  */
 public class MessageFactory {
 
-    private final Signer signer;
+    private Signer signer;
 
     public MessageFactory(Signer signer) {
+        this.signer = signer;
+    }
+
+    public void setSigner(Signer signer) {
         this.signer = signer;
     }
 

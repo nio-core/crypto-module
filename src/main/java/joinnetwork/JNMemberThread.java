@@ -1,7 +1,7 @@
 package joinnetwork;
 
 import blockchain.SawtoothUtils;
-import client.NetworkJoinManager;
+import client.JoinNetworkExtension;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,7 +17,7 @@ import util.Utilities;
 /**
  * This is the thread for the Network member that authenticates an applicant using challenge response.
  * The identity that is verified is the Sawtooth public key.
- * If the authentication is successful,
+ * If the authentication is successful, the request is passed to the VoteManager of the bound HyperZMQ instance
  * Counterpart is JNApplicantThread
  **/
 public class JNMemberThread implements Runnable {
@@ -29,13 +29,13 @@ public class JNMemberThread implements Runnable {
     private static final int NONCE_SIZE_IN_CHARS = 32;
     private static final int SOCKET_TIMEOUT_S = 60;
 
-    private final NetworkJoinManager joiningManager;
+    private final JoinNetworkExtension joiningManager;
 
     private final boolean doPrint = true;
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
     public JNMemberThread(String myID, JoinRequest joinRequest, Signer mySigner,
-                          String myPublicKeyHex, NetworkJoinManager joiningManager) {
+                          String myPublicKeyHex, JoinNetworkExtension joiningManager) {
         this.myID = myID;
         this.joinRequest = joinRequest;
         this.mySigner = mySigner;
@@ -66,7 +66,7 @@ public class JNMemberThread implements Runnable {
             // so we can verify they own the private key for the public key they claim to be
             String recv = in.readLine();
             JNResponseMessage response;
-            response = Utilities.deserializeMessage(recv, JNResponseMessage.class);
+            response = Utilities.deserializeMessage(recv, JNResponseMessage.class); // this prints the error already
             if (response == null) return; // TODO
             boolean valid = SawtoothUtils.verify(response.getSignablePayload(),
                     response.getSignature(),
@@ -79,6 +79,9 @@ public class JNMemberThread implements Runnable {
                 out.println("Invalid signature!");
                 joiningManager.authenticationFailure(joinRequest);
             }
+            in.close();
+            out.close();
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -8,8 +8,6 @@ public class PubSocket {
     private String address;
     private ZContext context = new ZContext();
     private ZMQ.Socket socket;
-    public final static String TOPIC_SUFFIX = "-!-";
-
 
     public PubSocket(String address) {
         this.address = address;
@@ -20,19 +18,30 @@ public class PubSocket {
         return address;
     }
 
-    public boolean send(String message, String topic) {
+    public void bind() {
         socket.bind(address);
+    }
+
+    public void disconnect() {
+        socket.disconnect(address);
+    }
+
+    public boolean send(String message, String topic) {
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         String toSend = topic == null ? message :
-                (topic + TOPIC_SUFFIX + message);
-        //System.out.println("Sending message: " + toSend);
+                (topic + message);
+        boolean ret = false;
 
-        boolean ret = socket.send(toSend);
-        socket.disconnect(address);
+        ret = socket.send(toSend);
+        if (ret) {
+            System.out.println("Sending message: " + toSend);
+        } else {
+            //System.out.println("Sending failed!");
+        }
         return ret;
     }
 }

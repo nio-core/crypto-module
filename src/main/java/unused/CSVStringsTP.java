@@ -1,9 +1,11 @@
-package txprocessor;
+package unused;
 
 import blockchain.ValidatorAddress;
 import sawtooth.sdk.processor.TransactionProcessor;
+import txprocessor.CSVStringsHandler;
 
-public class AllChatTP {
+public class CSVStringsTP {
+
     public static void main(String[] args) {
         String url = ValidatorAddress.VALIDATOR_URL_DEFAULT;
         if (args != null && args.length > 0) {
@@ -12,7 +14,7 @@ public class AllChatTP {
         // Connect the transaction processor to the validator
         TransactionProcessor tp = new TransactionProcessor(url);
         // The handler implements the actual chaincode
-        tp.addHandler(new AllChatHandler());
+        tp.addHandler(new CSVStringsHandler());
         Thread t = new Thread(tp);
         t.start();
     }
