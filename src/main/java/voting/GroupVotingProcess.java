@@ -8,7 +8,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteReceiver {
+/**
+ * This class demonstrates a voting process that uses a group to send the votingMatter and collect the votes.
+ * Can be used for both JOIN_NETWORK and GROUP type requests.
+ *
+ * This implementation requires ALL specified voters (or timeout).
+ */
+public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final HyperZMQ hyperZMQ;
 
@@ -16,7 +22,7 @@ public class GroupInternVotingProcess implements IVotingProcess, IGroupVoteRecei
 
     private final BlockingQueue<Vote> resultBuffer = new ArrayBlockingQueue<Vote>(100);
 
-    public GroupInternVotingProcess(HyperZMQ hyperZMQ) {
+    public GroupVotingProcess(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
     }
 

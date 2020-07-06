@@ -19,7 +19,6 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
-import txprocessor.TPUtils;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 

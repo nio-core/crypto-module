@@ -1,16 +1,14 @@
 package joingroup;
 
 import client.HyperZMQ;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
-import voting.GroupInternVotingProcess;
+import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
 
@@ -45,7 +43,7 @@ public class EvalScenario1 {
                 .setIdentity(PRIVATE_1)
                 .build();
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        originalClient.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(originalClient));
+        originalClient.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(originalClient));
         originalClient.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
 
@@ -112,22 +110,22 @@ public class EvalScenario1 {
 
         // Setup for voting - just vote YES
         client1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        client1.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(client1));
+        client1.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client1));
         client1.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "client1"));
 
         client2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        client2.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(client2));
+        client2.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client2));
         client2.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "client2"));
 
         client3.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        client3.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(client3));
+        client3.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client3));
         client3.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "client3"));
 
         client4.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        client4.getVoteManager().setVotingProcessGroup(new GroupInternVotingProcess(client4));
+        client4.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client4));
         client4.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "client4"));
 

@@ -3,16 +3,13 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
 import groups.GroupMessage;
-
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import joingroup.JoinRequest;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -94,7 +91,7 @@ public class EventHandler implements AutoCloseable {
                         // TODO distribute events here depending on type
                         for (Event e : list.getEventsList()) {
                             String received = e.toString();
-                            //print("Received Event: " + received);
+                            // print("Received Event: " + received);
                             // Group Messages (CSVStrings)
                             // Check whether the event is a new encrypted message or a JoinGroup request
                             // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address

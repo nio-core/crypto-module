@@ -5,7 +5,6 @@ import diffiehellman.EncryptedStream;
 import groups.Envelope;
 import groups.GroupMessage;
 import groups.MessageType;
-
 import java.net.ConnectException;
 import java.util.Collections;
 import java.util.List;
@@ -16,7 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
-
 import joingroup.JoinRequest;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
@@ -108,14 +106,22 @@ public class VoteManager {
                     if (statusCallback != null) {
                         statusCallback.newVoteCasted(matter, vote);
                     }
-
-                    // If the votingMatter was about joining network, send the vote back in allchat
+                    Envelope env = new Envelope(hyperZMQ.getClientID(), MessageType.VOTE, vote.toString());
+                    // If the votingMatter was about joining network, send the vote back in the dedicated JoinNetworkVoters group
                     if (matter.getJoinRequest().getType().equals(JoinRequestType.NETWORK)) {
-                        hyperZMQ.sendAllChat(vote.toString());
+                        //hyperZMQ.sendAllChat(vote.toString());
+                        if (hyperZMQ.isGroupAvailable(HyperZMQ.JOIN_NETWORK_VOTE_GROUP)) {
+                            String payload = hyperZMQ.encryptEnvelope(HyperZMQ.JOIN_NETWORK_VOTE_GROUP, env);
+                            GroupMessage message = new GroupMessage(HyperZMQ.JOIN_NETWORK_VOTE_GROUP, payload, false, true);
+                            Transaction t = hyperZMQ.blockchainHelper.csvStringsTransaction(message.getBytes());
+                            hyperZMQ.blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+                        } else {
+                            print("NetworkVoters group is not available on this client");
+                        }
                     } else if (matter.getJoinRequest().getType().equals(JoinRequestType.GROUP)) {
                         // If the votingMatter was about joining group, sent the vote back in the specified group
                         // TODO make this more generic?
-                        Envelope env = new Envelope(hyperZMQ.getClientID(), MessageType.VOTE, vote.toString());
+
                         String payload = hyperZMQ.encryptEnvelope(matter.getJoinRequest().getGroupName(), env);
                         // TODO write to chain behavior
                         GroupMessage message = new GroupMessage(matter.getJoinRequest().getGroupName(), payload, false, true);
@@ -238,32 +244,30 @@ public class VoteManager {
                         joinRequest.getAddress(),
                         joinRequest.getPort(), false);
                 print("Starting Diffie-Hellman to create session key...");
-                EncryptedStream encryptedStream = null;
                 try {
-                    encryptedStream = exchange.call();
-                } catch (ConnectException e) {
-                    // TODO applicant has not set up a server
-                    print("Cannot notify the applicant because no server is listening for a connection on: "
-                            + joinRequest.getAddress() + ":" + joinRequest.getPort());
-                    //e.printStackTrace();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                if (encryptedStream != null) {
-                    if (resultPair.right) {
-                        if (joinRequest.getType() == JoinRequestType.GROUP) {
-                            print("Sending key of group: " + joinRequest.getGroupName());
-                            encryptedStream.write(hyperZMQ.getKeyForGroup(joinRequest.getGroupName()));
-                            hyperZMQ.sendKeyExchangeReceiptFor(joinRequest.getGroupName(), joinRequest.getApplicantPublicKey());
+                    try (EncryptedStream encryptedStream = exchange.call()) {
+                        if (resultPair.right) {
+                            if (joinRequest.getType() == JoinRequestType.GROUP) {
+                                print("Sending key of group: " + joinRequest.getGroupName());
+                                encryptedStream.write(hyperZMQ.getKeyForGroup(joinRequest.getGroupName()));
+                                hyperZMQ.sendKeyExchangeReceiptFor(joinRequest.getGroupName(), joinRequest.getApplicantPublicKey());
+                            } else {
+                                // TODO vvv the strings to indicate success / failure
+                                //print("Sending allowed to network response");
+                                encryptedStream.write("Allowed!" + hyperZMQ.getValidatorAddressToSend());
+                            }
                         } else {
-                            print("Sending allowed to network response");
-                            encryptedStream.write("Allowed");
+                            // TODO vvv the strings to indicate success / failure
+                            //print("Sending vote denied response.");
+                            encryptedStream.write("Vote denied");
                         }
-                    } else {
-                        print("Sending vote denied response.");
-                        encryptedStream.write("Vote denied");
+                    } catch (ConnectException e) {
+                        // TODO applicant has not set up a server
+                        print("Cannot notify the applicant because no server is listening for a connection on: "
+                                + joinRequest.getAddress() + ":" + joinRequest.getPort());
+                        //e.printStackTrace();
                     }
-                } else {
+                } catch (Exception e) {
                     // TODO
                     print("Diffie-Hellman key exchange failed!");
                 }

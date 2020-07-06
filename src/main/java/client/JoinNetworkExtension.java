@@ -1,22 +1,22 @@
 package client;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import joingroup.JoinRequest;
-import joinnetwork.JNApplicantThread;
 import joinnetwork.JNMemberThread;
 import util.AsyncSubSocket;
 import util.IAsyncSubSocketCallback;
 import util.Utilities;
 import voting.JoinRequestType;
 
-public class NetworkJoinManager implements IAsyncSubSocketCallback {
+/**
+ * This class can be added OPTIONALLY to a HyperZMQ instance to make it listen for clients that want to join the network.
+ */
+public class JoinNetworkExtension implements IAsyncSubSocketCallback {
 
     private final String clientID;
     private final HyperZMQ hyperZMQ;
 
-    private final ExecutorService jnApplicantExService = Executors.newFixedThreadPool(2);
     private final ExecutorService jnMemberExService = Executors.newFixedThreadPool(2);
     private final ExecutorService jnListenerExService = Executors.newSingleThreadExecutor();
     private final String joinNetworkAddress;
@@ -28,35 +28,18 @@ public class NetworkJoinManager implements IAsyncSubSocketCallback {
     public static final String JOIN_SAWTOOTH_NETWORK_TOPIC = "JOIN_NETWORK";
     private final boolean doPrint = true;
 
-    public NetworkJoinManager(HyperZMQ hyperZMQ, String joinNetworkSubAddress, boolean runListener) {
+    /**
+     * @param hyperZMQ              hyperZMQ instance to bind this to
+     * @param joinNetworkSubAddress to address on which to listen (with a ZMQ sub socket) for requests
+     */
+    public JoinNetworkExtension(HyperZMQ hyperZMQ, String joinNetworkSubAddress) {
         this.clientID = hyperZMQ.getClientID();
         this.hyperZMQ = hyperZMQ;
         this.joinNetworkAddress = joinNetworkSubAddress;
         this.jnSubSocket = null;
-        if (runListener) {
-            this.jnSubSocket = new AsyncSubSocket(clientID, this, joinNetworkSubAddress, JOIN_SAWTOOTH_NETWORK_TOPIC,
-                    JOIN_NETWORK_RECEIVE_TIMEOUT_MS);
-            jnListenerExService.submit(jnSubSocket);
-        }
-    }
-
-    /**
-     * @param serverAddress  the address on which this client should listen for a response (client-server model)
-     * @param serverPort     the port on which this client should listen for a response (client-server model)
-     * @param additionalInfo additional info that can be processed while voting
-     */
-    public void tryJoinNetwork(String serverAddress, int serverPort, Map<String, String> additionalInfo) {
-        print("tryJoinNetwork");
-        JNApplicantThread t = new JNApplicantThread(clientID,
-                hyperZMQ.getSawtoothPublicKey(),
-                hyperZMQ.getSawtoothSigner(),
-                this,
-                serverAddress,
-                serverPort,
-                additionalInfo,
-                joinNetworkAddress);
-
-        jnApplicantExService.submit(t);
+        this.jnSubSocket = new AsyncSubSocket(clientID, this, joinNetworkSubAddress, JOIN_SAWTOOTH_NETWORK_TOPIC,
+                JOIN_NETWORK_RECEIVE_TIMEOUT_MS);
+        jnListenerExService.submit(jnSubSocket);
     }
 
     /**

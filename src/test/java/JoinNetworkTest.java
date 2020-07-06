@@ -1,11 +1,13 @@
 import client.HyperZMQ;
-import client.NetworkJoinManager;
-
+import client.JoinHelper;
+import client.JoinNetworkExtension;
 import java.util.Collections;
-
+import java.util.concurrent.atomic.AtomicBoolean;
+import joinnetwork.IJoinNetworkStatusCallback;
+import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
-import voting.GroupInternVotingProcess;
+import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
 
@@ -25,35 +27,60 @@ public class JoinNetworkTest {
     final String PRIVATE_4 = "51ea8b07806fe89b8675ecee0d140146f48abf1a5cff31f6f2ee8c75ae900e2d";
     final String PUBLIC_4 = "0203be51b27de3bd42d09ef53928c7d7d963dc9134055a57c9c2a90527764eecf3";
 
+    AtomicBoolean success = new AtomicBoolean(false);
+    String receivedValAddr = null;
+
+
+    // The transaction processors have to be running
     @Test
     public void testJoining() throws InterruptedException {
         String joinNetworkSubSocketAddr = "tcp://127.0.0.1:5556";
 
-        HyperZMQ join = new HyperZMQ.Builder("joinClient", "password", null)
-                .createNewIdentity(true)
-                .build();
-        NetworkJoinManager joinManagerAppl = new NetworkJoinManager(join, joinNetworkSubSocketAddr, false);
-
-        // TODO the listener should be split up
-        // TODO: New flow: New clients start out with some static joinNetwork(addr, myKey, ...) that generates NetworkInformation which
-        // TODO: can be used to create a HyperZMQ instance that connects to the network.
-        // TODO: By default, the allchat is accessible and tryjoingroup can then be used
-
+        // Setup the member
         HyperZMQ member = new HyperZMQ.Builder("memberClient", "password", null)
                 .createNewIdentity(true)
                 .build();
+        JoinNetworkExtension joinManagerMember = new JoinNetworkExtension(member, joinNetworkSubSocketAddr);
 
-        NetworkJoinManager joinManagerMember = new NetworkJoinManager(member, joinNetworkSubSocketAddr, true);
+        member.debugClearGroupMembers(HyperZMQ.JOIN_NETWORK_VOTE_GROUP);
 
-        member.getVoteManager().setVotingProcessNetwork(new GroupInternVotingProcess(member));
+        Thread.sleep(800);
+
+        if (member.checkJoinNetworkVoters()) {
+            System.out.println("created network voters");
+        }
+
+        member.getVoteManager().setVotingProcessNetwork(new GroupVotingProcess(member));
         member.getVoteManager().setVotingStrategyNetwork(new YesVoteStrategy(50));
         member.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector(), 5);
         member.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, member.getClientID()));
 
-        Thread.sleep(2000);
+        member.setValidatorAddressToSend("192.168.178.90:4004"); // validator default port is 4004
 
-        joinManagerAppl.tryJoinNetwork("localhost", 5555, Collections.emptyMap());
+        Thread.sleep(1000);
 
-        Thread.sleep(15000);
+        // Setup applicant - generates the identity
+        JoinHelper joinHelper = new JoinHelper("applicant");
+        joinHelper.tryJoinNetwork(joinNetworkSubSocketAddr, "localhost", 5555, Collections.emptyMap(), (code, info) -> {
+            //System.out.println(String.valueOf(code));
+            if (code == IJoinNetworkStatusCallback.ACCESS_GRANTED) {
+                System.out.println("SUCCESS");
+                success.set(true);
+                Assert.assertEquals("192.168.178.90:4004", info);
+                receivedValAddr = info;
+            }
+        });
+
+        Thread.sleep(10000);
+        Assert.assertTrue(success.get());
+
+        // Now the "applicant" can build a HyperZMQ instance with the identity it used to join the network
+        // and the validator address that was received.
+        HyperZMQ newInst = new HyperZMQ.Builder("newClient", "password", receivedValAddr)
+                .createNewIdentity(false)
+                .setIdentity(joinHelper.getPrivateKey())
+                .build();
+
+        // etc ...
     }
 }
