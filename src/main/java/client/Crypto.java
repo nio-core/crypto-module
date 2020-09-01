@@ -185,17 +185,19 @@ public class Crypto {
     }
 
     private void save() {
-        // Prepare the other 'non-key' data
-        Map<String, String> dataMap = new HashMap<>();
-        dataMap.put(SAWTOOTHER_SIGNER_KEY, privateKey.hex());
-        // Since the curve keys have the alias built in, the maps key is not needed
-        for (int i = 0; i < curveKeys.size(); i++) {
-            dataMap.put(String.valueOf(i), curveKeys.get(i).toString());
-        }
+        if (!hyperZMQ.isVolatile) {
+            // Prepare the other 'non-key' data
+            Map<String, String> dataMap = new HashMap<>();
+            dataMap.put(SAWTOOTHER_SIGNER_KEY, privateKey.hex());
+            // Since the curve keys have the alias built in, the maps key is not needed
+            for (int i = 0; i < curveKeys.size(); i++) {
+                dataMap.put(String.valueOf(i), curveKeys.get(i).toString());
+            }
 
-        //
-        groupKeys.put(DATA_ENCRYPTION_KEY_ALIAS, dataEncryptionKey);
-        storage.saveData(new Data(groupKeys, dataMap));
+            //
+            groupKeys.put(DATA_ENCRYPTION_KEY_ALIAS, dataEncryptionKey);
+            storage.saveData(new Data(groupKeys, dataMap));
+        }
     }
 
     private void load() {

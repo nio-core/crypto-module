@@ -26,6 +26,8 @@ public class CSVStringsHandler implements TransactionHandler {
     private final String namespace = "2f9d35";
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
+    private final String GROUP_MESSAGE_VERSION = "1.0.0";
+
     public CSVStringsHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
@@ -126,7 +128,7 @@ public class CSVStringsHandler implements TransactionHandler {
                     String eventAddr = message.addressOnChain != null ? message.addressOnChain : "null";
                     Map.Entry<String, String> e = new AbstractMap.SimpleEntry<>("address", eventAddr);
                     Collection<Map.Entry<String, String>> eventAttributes = Collections.singletonList(e);
-                    print("Firing event with attributes: " + eventAttributes.toString() + ", Eventype: " + message.group);
+                    print("Firing event with attributes: " + eventAttributes.toString() + ", Eventtype: " + message.group);
                     try {
                         context.addEvent(message.group, eventAttributes, tpProcessRequest.getPayload());
                         //print("Event triggered");

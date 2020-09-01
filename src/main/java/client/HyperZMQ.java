@@ -17,6 +17,7 @@ import groups.GroupMessage;
 import groups.IGroupCallback;
 import groups.IGroupVoteReceiver;
 import groups.MessageType;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import joingroup.IJoinGroupStatusCallback;
 import joingroup.JoinRequest;
 import keyexchange.KeyExchangeReceipt;
@@ -81,7 +83,7 @@ public class HyperZMQ implements AutoCloseable {
     // by default, the contract processing is done without invoking any callback
     private boolean passthroughAll = false;
 
-    private final MessageFactory messageFactory;
+    public final MessageFactory messageFactory;
 
     private final PingHandler pingHandler;
 
@@ -90,6 +92,9 @@ public class HyperZMQ implements AutoCloseable {
 
     // This is the validator address that will be sent to clients that were allowed to join the network (can be different from the one this client uses)
     private String validatorAddressToSend;
+
+    // If this is set to true, this client will not save any data
+    public boolean isVolatile = false;
 
     /**
      * @param id               id
@@ -555,12 +560,22 @@ public class HyperZMQ implements AutoCloseable {
 
     /**
      * ALL CALLBACKS ARE INVALIDATED WHEN THE GROUP IS REMOVED
+     * FILES A RECEIPT TO REMOVE THE PUBLIC KEY FROM THE GROUP ENTRY IN THE BLOCKCHAIN
      *
      * @param groupName name of group to remove key and callbacks for
      */
     public void removeGroup(String groupName) {
         crypto.removeGroup(groupName);
         textmessageCallbacks.remove(groupName);
+
+        KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(
+                getSawtoothPublicKey(),
+                ReceiptType.LEAVE_GROUP,
+                groupName);
+
+        blockchainHelper.buildAndSendBatch(
+                Collections.singletonList(
+                        blockchainHelper.keyExchangeReceiptTransaction(receipt)));
     }
 
     /**
@@ -598,7 +613,7 @@ public class HyperZMQ implements AutoCloseable {
             e.printStackTrace();
             return;
         } catch (IllegalStateException e) {
-            print("Received a message in a group for which a key is not present. Message: (" + group + "," + encryptedMessage + ")");
+            // print("Received a message in a group for which a key is not present. Message: (" + group + "," + encryptedMessage + ")");
             return;
         }
         Envelope envelope = new Gson().fromJson(plainMessage, Envelope.class);
@@ -778,6 +793,11 @@ public class HyperZMQ implements AutoCloseable {
 
     public void sendKeyExchangeReceipt(KeyExchangeReceipt receipt) {
         Objects.requireNonNull(receipt);
+        Objects.requireNonNull(receipt.getMemberPublicKey());
+        Objects.requireNonNull(receipt.getApplicantPublicKey());
+        Objects.requireNonNull(receipt.getGroup());
+        Objects.requireNonNull(receipt.getSignature());
+
         Transaction t = blockchainHelper.keyExchangeReceiptTransaction(receipt);
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
@@ -790,11 +810,10 @@ public class HyperZMQ implements AutoCloseable {
             throw new IllegalArgumentException("Cannot create receipt for group you do not have key for");
         }
 
-        KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(this.getSawtoothPublicKey(),
+        KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(
                 applicantPublicKey,
                 ReceiptType.JOIN_GROUP,
-                groupName,
-                System.currentTimeMillis());
+                groupName);
 
         Transaction t = blockchainHelper.keyExchangeReceiptTransaction(receipt);
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
@@ -838,11 +857,10 @@ public class HyperZMQ implements AutoCloseable {
             // Create the group manually to bypass the check for reserved names
             crypto.createGroup(JOIN_NETWORK_VOTE_GROUP);
             eventHandler.subscribeToGroup(JOIN_NETWORK_VOTE_GROUP);
-            KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(getSawtoothPublicKey(),
+            KeyExchangeReceipt receipt = messageFactory.keyExchangeReceipt(
                     getSawtoothPublicKey(),
                     ReceiptType.JOIN_GROUP,
-                    JOIN_NETWORK_VOTE_GROUP,
-                    System.currentTimeMillis());
+                    JOIN_NETWORK_VOTE_GROUP);
 
             Transaction t = blockchainHelper.keyExchangeReceiptTransaction(receipt);
             blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
@@ -932,6 +950,8 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     /**
+     * ASYNC METHOD
+     *
      * @param groupName        name of the group that should be joined
      * @param address          the address on which this client should listen for a keyexchange ("localhost")
      * @param port             the port on which this client should listen for a keyexchange
@@ -1080,10 +1100,10 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     public String getValidatorAddressToSend() {
-        return validatorAddressToSend;
+        return blockchainHelper.getValidatorAddress();
     }
 
     public void setValidatorAddressToSend(String validatorAddressToSend) {
-        this.validatorAddressToSend = validatorAddressToSend;
+        blockchainHelper.setValidatorAddress(validatorAddress);
     }
 }

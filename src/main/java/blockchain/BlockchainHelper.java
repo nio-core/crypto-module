@@ -3,6 +3,7 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+
 import keyexchange.KeyExchangeReceipt;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,14 +44,16 @@ public class BlockchainHelper {
     private String baseRestAPIUrl;
     private final HyperZMQ hyperZMQ;
     private final boolean printRESTAPIResponse = false;
-    private ZContext zContext = new ZContext();
+    private final ZContext zContext = new ZContext();
     private final ZMQ.Socket submitSocket;
 
     public static final String KEY_EXCHANGE_RECEIPT_FAMILY = "KeyExchangeReceipt";
     public static final String KEY_EXCHANGE_RECEIPT_NAMESPACE = "ac0cab";
     public static final String CSVSTRINGS_FAMILY = "csvstrings";
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
-    private boolean doPrint = true;
+    private final boolean doPrint = false;
+
+    private String validatorAddress;
 
     public BlockchainHelper(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
@@ -57,6 +61,18 @@ public class BlockchainHelper {
 
         submitSocket = zContext.createSocket(ZMQ.DEALER);
         submitSocket.connect(ValidatorAddress.VALIDATOR_URL_DEFAULT);
+    }
+
+    public void setValidatorAddress(String validatorAddress) {
+        if (!this.validatorAddress.equals(validatorAddress)) {
+            this.submitSocket.disconnect(this.validatorAddress);
+            this.validatorAddress = validatorAddress;
+            this.submitSocket.connect(this.validatorAddress);
+        }
+    }
+
+    public String getValidatorAddress() {
+        return this.validatorAddress;
     }
 
     public void setBaseRestAPIUrl(String baseRestAPIUrl) {

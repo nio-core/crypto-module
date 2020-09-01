@@ -45,9 +45,8 @@ public class MessageFactory {
         return signIfPossible(new JoinRequest(applicantPublicKey, contactPublicKey, type, groupName, votingArgs, address, port));
     }
 
-    public KeyExchangeReceipt keyExchangeReceipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType,
-                                                 @Nullable String group, long timestamp) {
-        return signIfPossible(new KeyExchangeReceipt(memberPublicKey, applicantPublicKey, receiptType, group, timestamp));
+    public KeyExchangeReceipt keyExchangeReceipt(String applicantPublicKey, ReceiptType receiptType, String group) {
+        return signIfPossible(new KeyExchangeReceipt(signer.getPublicKey().hex(), applicantPublicKey, receiptType, group, System.currentTimeMillis()));
     }
 
     private <T> T signIfPossible(T message) {

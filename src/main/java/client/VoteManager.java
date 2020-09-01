@@ -61,6 +61,7 @@ public class VoteManager {
     private IVoteStatusCallback statusCallback = null;
 
     private int votingProcessTimeoutMS = 3000;
+    private final boolean doPrint = false;
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
@@ -191,7 +192,8 @@ public class VoteManager {
                     // Let self vote
                     if (groupMembers.size() > votingParticipantsThreshold) {
                         if (subgroupSelector == null) {
-                            throw new IllegalStateException("No SubGroupSelector available but is required.");
+                            print("No SubGroupSelector available but is required. Voting will be aborted!!");
+                            continue;
                         }
                         groupMembers = subgroupSelector.selectSubgroup(groupMembers, votingParticipantsThreshold);
                     }
@@ -277,7 +279,9 @@ public class VoteManager {
     }
 
     private void print(String message) {
-        System.out.println("[" + Thread.currentThread().getId() + "] [VoteManager][" + hyperZMQ.getClientID() + "]  " + message);
+        if (doPrint) {
+            System.out.println("[" + Thread.currentThread().getId() + "] [VoteManager][" + hyperZMQ.getClientID() + "]  " + message);
+        }
     }
 
     /*
