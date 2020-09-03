@@ -37,7 +37,7 @@ public class JoinNetworkTest {
         String joinNetworkSubSocketAddr = "tcp://127.0.0.1:5556";
 
         // Setup the member
-        HyperZMQ member = new HyperZMQ.Builder("memberClient", "password", null)
+        HyperZMQ member = new HyperZMQ.Builder("memberClient", "password")
                 .createNewIdentity(true)
                 .build();
         JoinNetworkExtension joinManagerMember = new JoinNetworkExtension(member, joinNetworkSubSocketAddr);
@@ -76,7 +76,8 @@ public class JoinNetworkTest {
 
         // Now the "applicant" can build a HyperZMQ instance with the identity it used to join the network
         // and the validator address that was received.
-        HyperZMQ newInst = new HyperZMQ.Builder("newClient", "password", receivedValAddr)
+        HyperZMQ newInst = new HyperZMQ.Builder("newClient", "password")
+                .setValidatorAddress(receivedValAddr)
                 .createNewIdentity(false)
                 .setIdentity(joinHelper.getPrivateKey())
                 .build();

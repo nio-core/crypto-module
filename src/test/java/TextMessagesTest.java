@@ -41,15 +41,15 @@ public class TextMessagesTest {
     public void testMultiGroup() {
         //CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ client3 = new HyperZMQ.Builder("Client3", "password", null)
+        HyperZMQ client3 = new HyperZMQ.Builder("Client3", "password")
                 .createNewIdentity(true)
                 .build();
 
@@ -89,15 +89,15 @@ public class TextMessagesTest {
         // CSVStringsTP.main(null);
         //sleep(1000);
 
-        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ failingClient = new HyperZMQ.Builder("ClientFail", "password", null)
+        HyperZMQ failingClient = new HyperZMQ.Builder("ClientFail", "password")
                 .createNewIdentity(true)
                 .build();
 
@@ -147,11 +147,11 @@ public class TextMessagesTest {
     public void testMultiMessage() throws InterruptedException {
         // CSVStringsTP.main(null);
         //sleep(1000);
-        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password", null)
+        HyperZMQ client1 = new HyperZMQ.Builder("Client1", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password", null)
+        HyperZMQ client2 = new HyperZMQ.Builder("Client2", "password")
                 .createNewIdentity(true)
                 .build();
 

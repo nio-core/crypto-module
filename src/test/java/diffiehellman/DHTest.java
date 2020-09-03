@@ -14,11 +14,11 @@ public class DHTest {
         String address = "localhost";
         int port = 5555;
 
-        HyperZMQ hzmqServer = new HyperZMQ.Builder("server", "password", null)
+        HyperZMQ hzmqServer = new HyperZMQ.Builder("server", "password")
                 .createNewIdentity(true)
                 .build();
 
-        HyperZMQ hzmqClient = new HyperZMQ.Builder("client", "password", null)
+        HyperZMQ hzmqClient = new HyperZMQ.Builder("client", "password")
                 .createNewIdentity(true)
                 .build();
 

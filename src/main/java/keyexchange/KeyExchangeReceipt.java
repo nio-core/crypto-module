@@ -18,8 +18,6 @@ public class KeyExchangeReceipt implements ISignableMessage {
         this.applicantPublicKey = applicantPublicKey;
         this.receiptType = receiptType;
         this.group = group;
-        if (receiptType == ReceiptType.JOIN_NETWORK)
-            this.group = null;
         this.timestamp = timestamp;
     }
 

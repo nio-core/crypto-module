@@ -1,6 +1,6 @@
 package keyexchange;
 
 public enum ReceiptType {
-    JOIN_NETWORK,
-    JOIN_GROUP
+    JOIN_GROUP,
+    LEAVE_GROUP
 }

@@ -1,10 +1,14 @@
 package joingroup;
 
 import client.HyperZMQ;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import keyexchange.KeyExchangeReceipt;
+import keyexchange.ReceiptType;
 import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
@@ -30,16 +34,15 @@ public class EvalScenario1 {
     AtomicBoolean c2Joined = new AtomicBoolean(false);
     AtomicBoolean c3Joined = new AtomicBoolean(false);
     AtomicBoolean c4Joined = new AtomicBoolean(false);
-    private AtomicBoolean finished = new AtomicBoolean(false);
-
 
     @Test
-    public void measureTime() throws InterruptedException {
+    public void increasingGroupSizeTimeMeasure() throws InterruptedException {
+        AtomicBoolean finished = new AtomicBoolean(false);
         String group = "superGroup";
-        int numOfRuns = 20; // TODO try 999999999 clients
+        int numOfClients = 300; // TODO try 999999999 clients
         List<Long> times = new ArrayList<>();
 
-        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password", null)
+        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
@@ -48,7 +51,7 @@ public class EvalScenario1 {
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
 
         // TODO test with selection before voting
-        originalClient.getVoteManager().setVotingParticipantsThreshold(5);
+        originalClient.getVoteManager().setVotingParticipantsThreshold(10);
         originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
 
         originalClient.debugClearGroupMembers(group);
@@ -59,28 +62,112 @@ public class EvalScenario1 {
 
         Thread.sleep(1000);
 
-        for (int i = 0; i < numOfRuns; i++) {
-            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password", null)
+        for (int i = 0; i < numOfClients; i++) {
+            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password")
                     .createNewIdentity(true)
                     .build();
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
             Thread.sleep(500);
-
+            CountDownLatch latch = new CountDownLatch(1);
             long startTime = System.currentTimeMillis();
 
             tmp.tryJoinGroup(group, "localhost", (5555 + i), Collections.emptyMap(), (code, info) -> {
                 if (code == IJoinGroupStatusCallback.KEY_RECEIVED) {
-                    finished.set(true);
+                    latch.countDown();
                 }
             }, PUBLIC_1); // Explicitly let the original client do the voting - saves a lot of boilerplate code here
-            while (!finished.get()) {
-            }
+
+            latch.await();
+
             long endTime = System.currentTimeMillis() - startTime;
-            finished.set(false);
             times.add(endTime);
         }
 
-        System.out.println("[TEST] Times: " + times.toString());
+        System.out.println("[TEST] Up to " + numOfClients + " times:" + times.toString());
+    }
+
+    @Test
+    public void votingTimeWithXClientsInGroup() throws InterruptedException {
+        /// Transaction Processors should be running
+        /////// PARAMETERS ///////////
+        int groupSize = 100;
+        int numberOfRuns = 50;
+        int numberOfWarmups = 5;
+        //////////////////////////////
+
+        String groupName = "testgroup";
+        List<Long> times = new ArrayList<>();
+
+        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password")
+                .setIdentity(PRIVATE_1)
+                .build();
+        originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
+        originalClient.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(originalClient));
+        originalClient.getVoteManager().setVoteEvaluator(
+                new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
+
+        originalClient.getVoteManager().setVotingParticipantsThreshold(500);
+        originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
+
+        originalClient.debugClearGroupMembers(groupName);
+
+        Thread.sleep(1000);
+
+        originalClient.createGroup(groupName);
+        String groupKey = originalClient.getKeyForGroup(groupName);
+        Thread.sleep(1000);
+
+        // Fill the group with the specified number of clients - do the shortcut with inserting the key directly + send receipt manually
+        // We are not interested in the voting for the setup phase
+        /* minus the original client */
+        for (int i = 0; i < (groupSize - 1); i++) {
+            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password")
+                    .createNewIdentity(true)
+                    .build();
+            tmp.isVolatile = true; // Otherwise saving data will throw concurrency exceptions
+
+            tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
+            tmp.addGroup(groupName, groupKey);
+            KeyExchangeReceipt receipt = originalClient.messageFactory.keyExchangeReceipt(tmp.getSawtoothPublicKey(), ReceiptType.JOIN_GROUP, groupName);
+
+            originalClient.sendKeyExchangeReceipt(receipt);
+            Thread.sleep(500); // Time to process the receipt
+        }
+
+        // Let a new client try to join for given number of times and measure that
+        HyperZMQ tmp = new HyperZMQ.Builder("joiner", "sdfsd")
+                .createNewIdentity(true)
+                .build();
+        tmp.isVolatile = true;
+
+        for (int i = 0; i < (numberOfRuns + numberOfWarmups); i++) {
+            CountDownLatch latch = new CountDownLatch(1);
+            long start = System.currentTimeMillis();
+
+            tmp.tryJoinGroup(groupName, "localhost", 5555 + i, Collections.emptyMap(), (code, info) -> {
+                if (code == IJoinGroupStatusCallback.KEY_RECEIVED) {
+                    latch.countDown();
+                }
+            }, PUBLIC_1);
+
+            latch.await();
+            long elapsedTime = System.currentTimeMillis() - start;
+
+            if (i >= numberOfWarmups) {
+                times.add(elapsedTime);
+            }
+
+            System.out.println("[TEST] Time: " + elapsedTime + "ms");
+
+            // Remove the client from the group to keep it at X members
+            tmp.removeGroup(groupName);
+            Thread.sleep(1000); // wait for receipt to be processed
+        }
+
+        System.out.println("[TEST] Result for " + groupSize + " Clients: " + times.toString() + "[ms]");
+        Double avg = times.stream().mapToLong(Long::longValue).average().getAsDouble();
+        DecimalFormat df = new DecimalFormat("####.###");
+        System.out.println("[TEST] Average: " + df.format(avg) + "[ms]");
     }
 
     /**
@@ -92,19 +179,19 @@ public class EvalScenario1 {
     @Test
     public void test() throws InterruptedException {
         // Client setup
-        HyperZMQ client1 = new HyperZMQ.Builder("client1", "password", null)
+        HyperZMQ client1 = new HyperZMQ.Builder("client1", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
 
-        HyperZMQ client2 = new HyperZMQ.Builder("client2", "password", null)
+        HyperZMQ client2 = new HyperZMQ.Builder("client2", "password")
                 .setIdentity(PRIVATE_2)
                 .build();
 
-        HyperZMQ client3 = new HyperZMQ.Builder("client3", "password", null)
+        HyperZMQ client3 = new HyperZMQ.Builder("client3", "password")
                 .setIdentity(PRIVATE_3)
                 .build();
 
-        HyperZMQ client4 = new HyperZMQ.Builder("client4", "password", null)
+        HyperZMQ client4 = new HyperZMQ.Builder("client4", "password")
                 .setIdentity(PRIVATE_4)
                 .build();
 

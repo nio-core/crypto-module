@@ -130,43 +130,47 @@ public class KeyExReceiptHandler implements TransactionHandler {
             print("Receipt is of JOIN_GROUP type, updating group entry...");
             String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, receipt.getGroup());
             print("Group address: " + groupAddress);
-            List<String> lEntries = readKeysFromAddress(groupAddress, state);
-            print("Entries at address before update: " + lEntries.toString());
+            List<String> entries = readKeysFromAddress(groupAddress, state);
+            print("Entries at address before update: " + entries.toString());
             print("Adding " + receipt.getApplicantPublicKey());
-            lEntries.add(receipt.getApplicantPublicKey());
-            lEntries.add(receipt.getMemberPublicKey()); // double check, gets removed here vvv if it is already in it
-            String strToWrite = lEntries.stream().distinct().reduce("", (s1, s2) -> {
-                if (s2.isEmpty()) return s1;
-                return s1 += s2 + ",";
-            });
-            strToWrite = strToWrite.substring(0, (strToWrite.length() - 1)); // remove trailing ','
+            entries.add(receipt.getApplicantPublicKey());
+            entries.add(receipt.getMemberPublicKey()); // double check, gets removed here vvv if it is already in it
+
+            String strToWrite = listToCSV(entries);
 
             if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
                 throw new InvalidTransactionException("Unable to update group member entry");
             }
 
             print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
-        } else if (receipt.getReceiptType() == ReceiptType.JOIN_NETWORK) {
-            print("Receipt is of JOIN_NETWORK type, updating members entry...");
-            String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, "AllChat");
-            print("Members address: " + groupAddress);
-            List<String> lEntries = readKeysFromAddress(groupAddress, state);
-            print("Entries at address before update: " + lEntries.toString());
-            print("Adding " + receipt.getApplicantPublicKey());
-            lEntries.add(receipt.getApplicantPublicKey());
-            lEntries.add(receipt.getMemberPublicKey()); // double check, gets removed here vvv if it is already in it
-            String strToWrite = lEntries.stream().distinct().reduce("", (s1, s2) -> {
-                if (s2.isEmpty()) return s1;
-                return s1 += s2 + ",";
-            });
-            strToWrite = strToWrite.substring(0, (strToWrite.length() - 1)); // remove trailing ','
+        } else if (receipt.getReceiptType() == ReceiptType.LEAVE_GROUP) {
+            String groupAddress = SawtoothUtils.namespaceHashAddress(namespace, receipt.getGroup());
+            List<String> entries = readKeysFromAddress(groupAddress, state);
+            String pubKeyToRemove = transactionRequest.getHeader().getSignerPublicKey();
 
-            if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
-                throw new InvalidTransactionException("Unable to update members entry");
+            if (entries.remove(pubKeyToRemove)) {
+                print("Removed " + pubKeyToRemove + " successfully.");
+            } else {
+                print("Could not find " + pubKeyToRemove + " in the list");
             }
 
-            print("Keys after writing: " + readKeysFromAddress(groupAddress, state).toString());
+            String strToWrite = listToCSV(entries);
+
+            if (!TPUtils.writeToAddress(strToWrite, groupAddress, state)) {
+                throw new InvalidTransactionException("Unable to update group member entry");
+            }
         }
+    }
+
+    private String listToCSV(List<String> list) {
+        String ret = list.stream().distinct().reduce("", (s1, s2) -> {
+            if (s2.isEmpty()) return s1;
+            return s1 += s2 + ",";
+        });
+        if (ret.length() > 0) {
+            ret = ret.substring(0, (ret.length() - 1)); // remove trailing ','
+        }
+        return ret;
     }
 
     private ArrayList<String> readKeysFromAddress(String address, Context state) throws InternalError, InvalidTransactionException {

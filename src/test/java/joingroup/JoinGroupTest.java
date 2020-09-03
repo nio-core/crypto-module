@@ -44,7 +44,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         // Prepare groups
         final String groupName = "testgroup";
 
-        HyperZMQ member1 = new HyperZMQ.Builder("member1", "password", null)
+        HyperZMQ member1 = new HyperZMQ.Builder("member1", "password")
                 .setIdentity(PRIVATE_MEMBER_1)
                 .build();
 
@@ -63,7 +63,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
 
         Thread.sleep(1000);
 
-        HyperZMQ member2 = new HyperZMQ.Builder("member2", "password", null)
+        HyperZMQ member2 = new HyperZMQ.Builder("member2", "password")
                 .setIdentity(PRIVATE_MEMBER_2)
                 .build();
 
@@ -78,7 +78,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 
         // Start the join process
-        HyperZMQ applicant = new HyperZMQ.Builder("applicant", "password", null)
+        HyperZMQ applicant = new HyperZMQ.Builder("applicant", "password")
                 .setIdentity(PRIVATE_APPLICANT)
                 .build();
 

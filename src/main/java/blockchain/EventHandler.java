@@ -15,6 +15,7 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
+import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
 import sawtooth.sdk.protobuf.Event;
 import sawtooth.sdk.protobuf.EventFilter;
 import sawtooth.sdk.protobuf.EventList;
@@ -235,6 +236,13 @@ public class EventHandler implements AutoCloseable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    void unsubscribe(String groupName) {
+        // TODO unsubscribing a single group is not possible, only to unsubscribe from all events
+        // https://sawtooth.hyperledger.org/docs/core/releases/latest/app_developers_guide/zmq_event_subscription.html#unsubscribing-to-events
+        // Therefore, unusable event messages (e.g. from a group we left) are just suppressed
+        // ClientEventsUnsubscribeRequest request = ClientEventsUnsubscribeRequest.newBuilder().
     }
 
     private String getValidatorURL() {
