@@ -11,5 +11,6 @@ public enum MessageType {
     VOTING_MATTER, // payload = VotingMatter.class
     VOTE, // payload = Vote.class
     PING_REQUEST, // payload = nonce
-    PING_RESPONSE // payload = nonce, signature, publickey (of responder)
+    PING_RESPONSE, // payload = nonce, signature, publickey (of responder)
+    DISBAND_GROUP
 }

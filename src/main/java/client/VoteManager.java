@@ -61,7 +61,7 @@ public class VoteManager {
     private IVoteStatusCallback statusCallback = null;
 
     private int votingProcessTimeoutMS = 3000;
-    private final boolean doPrint = false;
+    private final boolean doPrint = true;
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
@@ -362,6 +362,10 @@ public class VoteManager {
     public void startVotingFinisher() {
         Thread t = new Thread(this::handleFinishedVotes);
         votingFinisherExecutor.submit(t);
+    }
+
+    private void printErr(String message) {
+        System.err.println("[" + Thread.currentThread().getId() + "] [VoteManager][" + hyperZMQ.getClientID() + "]  " + message);
     }
 
     public void stopVotingFinisher() {

@@ -51,16 +51,17 @@ public class BlockchainHelper {
     public static final String KEY_EXCHANGE_RECEIPT_NAMESPACE = "ac0cab";
     public static final String CSVSTRINGS_FAMILY = "csvstrings";
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
-    private final boolean doPrint = false;
+    private final boolean doPrint = true;
 
     private String validatorAddress;
 
     public BlockchainHelper(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
+        // TODO unused vvv: refactor or remove
         baseRestAPIUrl = ValidatorAddress.REST_URL_DEFAULT;
 
         submitSocket = zContext.createSocket(ZMQ.DEALER);
-        submitSocket.connect(ValidatorAddress.VALIDATOR_URL_DEFAULT);
+        submitSocket.connect(hyperZMQ.getValidatorAddress());
     }
 
     public void setValidatorAddress(String validatorAddress) {

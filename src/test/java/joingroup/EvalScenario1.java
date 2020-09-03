@@ -42,7 +42,7 @@ public class EvalScenario1 {
         int numOfClients = 300; // TODO try 999999999 clients
         List<Long> times = new ArrayList<>();
 
-        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password", null)
+        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
@@ -63,7 +63,7 @@ public class EvalScenario1 {
         Thread.sleep(1000);
 
         for (int i = 0; i < numOfClients; i++) {
-            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password", null)
+            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password")
                     .createNewIdentity(true)
                     .build();
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
@@ -88,16 +88,17 @@ public class EvalScenario1 {
 
     @Test
     public void votingTimeWithXClientsInGroup() throws InterruptedException {
+        /// Transaction Processors should be running
         /////// PARAMETERS ///////////
         int groupSize = 100;
-        int numberOfRuns = 30;
+        int numberOfRuns = 50;
         int numberOfWarmups = 5;
         //////////////////////////////
 
         String groupName = "testgroup";
         List<Long> times = new ArrayList<>();
 
-        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password", null)
+        HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
@@ -105,7 +106,7 @@ public class EvalScenario1 {
         originalClient.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
 
-        originalClient.getVoteManager().setVotingParticipantsThreshold(5);
+        originalClient.getVoteManager().setVotingParticipantsThreshold(500);
         originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
 
         originalClient.debugClearGroupMembers(groupName);
@@ -120,7 +121,7 @@ public class EvalScenario1 {
         // We are not interested in the voting for the setup phase
         /* minus the original client */
         for (int i = 0; i < (groupSize - 1); i++) {
-            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password", null)
+            HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password")
                     .createNewIdentity(true)
                     .build();
             tmp.isVolatile = true; // Otherwise saving data will throw concurrency exceptions
@@ -134,7 +135,7 @@ public class EvalScenario1 {
         }
 
         // Let a new client try to join for given number of times and measure that
-        HyperZMQ tmp = new HyperZMQ.Builder("joiner", "sdfsd", null)
+        HyperZMQ tmp = new HyperZMQ.Builder("joiner", "sdfsd")
                 .createNewIdentity(true)
                 .build();
         tmp.isVolatile = true;
@@ -178,19 +179,19 @@ public class EvalScenario1 {
     @Test
     public void test() throws InterruptedException {
         // Client setup
-        HyperZMQ client1 = new HyperZMQ.Builder("client1", "password", null)
+        HyperZMQ client1 = new HyperZMQ.Builder("client1", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
 
-        HyperZMQ client2 = new HyperZMQ.Builder("client2", "password", null)
+        HyperZMQ client2 = new HyperZMQ.Builder("client2", "password")
                 .setIdentity(PRIVATE_2)
                 .build();
 
-        HyperZMQ client3 = new HyperZMQ.Builder("client3", "password", null)
+        HyperZMQ client3 = new HyperZMQ.Builder("client3", "password")
                 .setIdentity(PRIVATE_3)
                 .build();
 
-        HyperZMQ client4 = new HyperZMQ.Builder("client4", "password", null)
+        HyperZMQ client4 = new HyperZMQ.Builder("client4", "password")
                 .setIdentity(PRIVATE_4)
                 .build();
 

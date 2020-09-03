@@ -1,9 +1,6 @@
 package client;
 
-import blockchain.BlockchainHelper;
-import blockchain.EventHandler;
-import blockchain.PingHandler;
-import blockchain.SawtoothUtils;
+import blockchain.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import contracts.Contract;
@@ -95,6 +92,7 @@ public class HyperZMQ implements AutoCloseable {
 
     // If this is set to true, this client will not save any data
     public boolean isVolatile = false;
+    private boolean doPrint = true;
 
     /**
      * @param id               id
@@ -103,27 +101,33 @@ public class HyperZMQ implements AutoCloseable {
      * @param createNewStore   whether a new keystore should be created, if true a new signer (=blockchain identity)
      *                         and encryption key will be created
      */
-    private HyperZMQ(String id, @Nullable String pathToKeyStore, String keystorePassword, @Nullable String dataFilePath, boolean createNewStore, String validatorAddress) {
+    private HyperZMQ(String id, @Nullable String pathToKeyStore, String keystorePassword, @Nullable String dataFilePath,
+                     boolean createNewStore, String validatorAddress) {
         this.clientID = id;
+        this.validatorAddress = validatorAddress != null ? validatorAddress : ValidatorAddress.VALIDATOR_URL_DEFAULT;
+
         this.crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
         this.eventHandler = new EventHandler(this);
         this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
         this.pingHandler = new PingHandler(this);
-        this.validatorAddress = validatorAddress;
     }
 
     public static class Builder {
-        String id, keyStorePath = null, keyStorePassword, dataFilePath = null, validatorAddress;
+        String id, keyStorePath = null, keyStorePassword, dataFilePath = null, validatorAddress = null;
         String customIdentity = null;
         boolean createNewCrypto = true; // TODO change this default in production
         Signer signer = null;
 
-        public Builder(String id, String keyStorePassword, String validatorAddress) {
+        public Builder(String id, String keyStorePassword) {
             this.id = id;
             this.keyStorePassword = keyStorePassword;
+        }
+
+        public Builder setValidatorAddress(String validatorAddress) {
             this.validatorAddress = validatorAddress;
+            return this;
         }
 
         public Builder setKeyStorePath(String keyStorePath) {
@@ -561,6 +565,7 @@ public class HyperZMQ implements AutoCloseable {
     /**
      * ALL CALLBACKS ARE INVALIDATED WHEN THE GROUP IS REMOVED
      * FILES A RECEIPT TO REMOVE THE PUBLIC KEY FROM THE GROUP ENTRY IN THE BLOCKCHAIN
+     * THIS REMOVES THE GROUP ONLY LOCALLY MEANING THE KEY IS REMOVED
      *
      * @param groupName name of group to remove key and callbacks for
      */
@@ -655,6 +660,11 @@ public class HyperZMQ implements AutoCloseable {
                         }
                     }
                 }
+                break;
+            }
+            case DISBAND_GROUP: {
+                print(envelope.getSender() + " requested to disband group " + group);
+                crypto.removeGroup(group);
                 break;
             }
             default:
@@ -782,7 +792,13 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     void print(String message) {
-        System.out.println("[" + Thread.currentThread().getId() + "] [HyperZMQ]" + "[" + clientID + "]  " + message);
+        if (doPrint) {
+            System.out.println("[" + Thread.currentThread().getId() + "] [HyperZMQ]" + "[" + clientID + "]  " + message);
+        }
+    }
+
+    void printErr(String message) {
+        System.err.println("[" + Thread.currentThread().getId() + "] [HyperZMQ]" + "[" + clientID + "]  " + message);
     }
 
     public void setValidatorURL(String url) {
@@ -944,7 +960,7 @@ public class HyperZMQ implements AutoCloseable {
     /**
      * @see HyperZMQ#tryJoinGroup(String, String, int, Map, IJoinGroupStatusCallback, String)
      */
-    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, @Nonnull int port,
+    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, int port,
                              @Nullable Map<String, String> additionalInfo, @Nullable IJoinGroupStatusCallback callback) {
         tryJoinGroup(groupName, address, port, additionalInfo, callback, null);
     }
@@ -959,7 +975,7 @@ public class HyperZMQ implements AutoCloseable {
      * @param callback         status callback object that will be notified for each step (optional)
      * @param contactPublicKey public key of a client that should handle your request (optional). If not specified, the last client to join the group will be addressed
      */
-    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, @Nonnull int port,
+    public void tryJoinGroup(@Nonnull String groupName, @Nonnull String address, int port,
                              @Nullable Map<String, String> additionalInfo,
                              @Nullable IJoinGroupStatusCallback callback, @Nullable String contactPublicKey) {
         Objects.requireNonNull(groupName);
@@ -1099,11 +1115,40 @@ public class HyperZMQ implements AutoCloseable {
         this.groupVoteReceivers.remove(groupVoteReceiver);
     }
 
+    /**
+     * @return the validator address this client will send to applicants when the JoinNetwork process finishes
+     */
     public String getValidatorAddressToSend() {
         return blockchainHelper.getValidatorAddress();
     }
 
+    /**
+     * Set the validator address this client will send to applicants when the JoinNetwork process finishes
+     *
+     * @param validatorAddressToSend validatorAddressToSend
+     */
     public void setValidatorAddressToSend(String validatorAddressToSend) {
         blockchainHelper.setValidatorAddress(validatorAddress);
+    }
+
+    /**
+     * Request to disband the group by sending a message to the blockchain inside the group.
+     * Since this client will receive the event as well, the group will be removed for this client automatically
+     * without the need to call {@link HyperZMQ#removeGroup}
+     * @param groupName group name to disband
+     */
+    public void requestDisbandGroup(String groupName) {
+        if (!isGroupAvailable(groupName)) {
+            printErr("Cannot disband group that client is not member of!");
+            return;
+        }
+        Envelope e = new Envelope(this.clientID, MessageType.DISBAND_GROUP, "");
+        GroupMessage g = new GroupMessage(groupName, encryptEnvelope(groupName, e), true, true);
+        Transaction t = blockchainHelper.csvStringsTransaction(g.getBytes());
+        blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+    }
+
+    public String getValidatorAddress() {
+        return validatorAddress;
     }
 }

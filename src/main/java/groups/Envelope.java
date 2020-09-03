@@ -5,7 +5,8 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 /**
- *
+ * The envelope is encrypted and used as payload for {@link GroupMessage}.
+ * When receiving an event, the Envelope is decrypted used to determine what to do with the message inside it ({@link MessageType}).
  */
 public class Envelope {
     private final String sender;
