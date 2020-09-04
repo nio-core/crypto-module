@@ -176,47 +176,16 @@ public class BlockchainHelper {
 
         // Encode Batches in BatchList
         // The validator expects a batchlist (which is not atomic)
-        byte[] batchListBytes = BatchList.newBuilder()
+        BatchList batchList = BatchList.newBuilder()
                 .addBatches(batch)
-                .build()
-                .toByteArray();
+                .build();
 
-        return sendBatchListZMQ(batchListBytes);
+        return sendBatchListZMQ(batchList);
     }
 
-    public String getStateZMQ(String address) {
-        ClientStateGetRequest req = ClientStateGetRequest.newBuilder()
-                .clearStateRoot()
-                .setAddress(address)
-                .build();
-        //System.out.println("ClientStateGetRequest: " + req.toString());
-
-        Message message = Message.newBuilder()
-                .setMessageType(Message.MessageType.CLIENT_STATE_GET_REQUEST)
-                .setContent(req.toByteString())
-                .setCorrelationId(EventHandler.CORRELATION_ID)
-                .build();
-        //System.out.println("Request Message: " + message.toString());
-
-        submitSocket.send(message.toByteArray());
-        byte[] bResponse = submitSocket.recv();
-        //System.out.println("get state response raw: " + new String(bResponse));
-        Message respMessage;
+    private boolean sendBatchListZMQ(BatchList batchList) {
         try {
-            respMessage = Message.parseFrom(bResponse);
-            // Extract the ClientStateGetResponse
-            ClientStateGetResponse csgr = ClientStateGetResponse.parseFrom(respMessage.getContent());
-            //System.out.println("csgr: " + csgr.toString());
-            return csgr.getValue().toStringUtf8();
-        } catch (InvalidProtocolBufferException e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
-
-    private boolean sendBatchListZMQ(byte[] body) {
-        try {
-            ClientBatchSubmitRequest req = ClientBatchSubmitRequest.parseFrom(body);
+            ClientBatchSubmitRequest req = ClientBatchSubmitRequest.parseFrom(batchList.toByteArray());
             //System.out.println("ClientBatchSubmitRequest: " + req.toString());
 
             Message message = Message.newBuilder()
@@ -234,7 +203,11 @@ public class BlockchainHelper {
             //System.out.println("ClientBatchSubmitResponse parsed: " + cbsResp);
             // Check submission status
             boolean success = cbsResp.getStatus() == ClientBatchSubmitResponse.Status.OK;
-            print("Batch submit was " + (success ? "successful" : "not successful"));
+            if (success) {
+                print("Batch submit of " + batchList.toString() + "successful");
+            } else {
+                printErr("Batch submit of " + batchList.toString() + "failed!");
+            }
             return success;
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();
@@ -309,6 +282,36 @@ public class BlockchainHelper {
         return response;
     }
 
+    public String getStateZMQ(String address) {
+        ClientStateGetRequest req = ClientStateGetRequest.newBuilder()
+                .clearStateRoot()
+                .setAddress(address)
+                .build();
+        //System.out.println("ClientStateGetRequest: " + req.toString());
+
+        Message message = Message.newBuilder()
+                .setMessageType(Message.MessageType.CLIENT_STATE_GET_REQUEST)
+                .setContent(req.toByteString())
+                .setCorrelationId(EventHandler.CORRELATION_ID)
+                .build();
+        //System.out.println("Request Message: " + message.toString());
+
+        submitSocket.send(message.toByteArray());
+        byte[] bResponse = submitSocket.recv();
+        //System.out.println("get state response raw: " + new String(bResponse));
+        Message respMessage;
+        try {
+            respMessage = Message.parseFrom(bResponse);
+            // Extract the ClientStateGetResponse
+            ClientStateGetResponse csgr = ClientStateGetResponse.parseFrom(respMessage.getContent());
+            //System.out.println("csgr: " + csgr.toString());
+            return csgr.getValue().toStringUtf8();
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
     public String queryStateAddress(String addr) throws IOException {
         String resp = sendToRestEndpoint(("/state/" + addr), "GET", null);
         if (resp != null) {
@@ -334,5 +337,9 @@ public class BlockchainHelper {
     private void print(String message) {
         if (doPrint)
             System.out.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
+    }
+
+    private void printErr(String message) {
+        System.err.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
     }
 }

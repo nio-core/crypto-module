@@ -19,7 +19,7 @@ public class DisbandGroupTest {
         Assert.assertTrue(c2.isGroupAvailable(group));
 
         c1.requestDisbandGroup(group);
-        Thread.sleep(500);
+        Thread.sleep(4000);
 
         assertFalse(c2.isGroupAvailable(group));
         assertFalse(c1.isGroupAvailable(group));

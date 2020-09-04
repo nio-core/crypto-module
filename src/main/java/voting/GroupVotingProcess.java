@@ -62,7 +62,7 @@ public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     @Override
     public void voteReceived(Vote vote, String group) {
-        //System.out.println("Received vote: " + vote.toString());
+        System.out.println("Received vote: " + vote.toString());
         try {
             resultBuffer.put(vote);
         } catch (InterruptedException e) {

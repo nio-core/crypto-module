@@ -303,11 +303,11 @@ public class HyperZMQ implements AutoCloseable {
             // Now we have <group>,<decrypted msg>
             String[] strings = data.split(",");
             if (strings.length < 2) {
-                System.out.println("Queried data format is incorrect: " + data);
+                printErr("Queried data format is incorrect: " + data);
                 return null;
             }
             if (!crypto.hasKeyForGroup(strings[0])) {
-                System.out.println("Can't decrypt queried data, because key is missing for group: " + strings[0]);
+                printErr("Can't decrypt queried data, because key is missing for group: " + strings[0]);
                 return null;
             }
 
@@ -318,7 +318,7 @@ public class HyperZMQ implements AutoCloseable {
                 e.printStackTrace();
                 return null;
             } catch (JsonSyntaxException e) {
-                System.out.println("Queried data could not be deserialized to Envelope");
+                printErr("Queried data could not be deserialized to Envelope");
             }
 
         } catch (IOException e) {
@@ -348,7 +348,7 @@ public class HyperZMQ implements AutoCloseable {
      */
     public boolean sendTextToChain(String groupName, String message) {
         if (groupName == null || message == null || groupName.isEmpty() || message.isEmpty()) {
-            print("Empty group and/or message!");
+            printErr("Empty group and/or message!");
             return false;
         }
         // Wrap the message - the complete envelope will be encrypted
@@ -365,7 +365,7 @@ public class HyperZMQ implements AutoCloseable {
      */
     public boolean sendTextsToChain(String groupName, List<String> messages) {
         if (groupName == null || messages == null || groupName.isEmpty() || messages.isEmpty()) {
-            print("Empty group and/or message!");
+            printErr("Empty group and/or message!");
             return false;
         }
         return sendTextsToChain(Collections.singletonMap(groupName, messages));
@@ -379,7 +379,7 @@ public class HyperZMQ implements AutoCloseable {
      */
     public boolean sendTextsToChain(Map<String, List<String>> map) {
         if (map == null || map.isEmpty()) {
-            print("Empty map!");
+            printErr("Empty map!");
             return false;
         }
         Map<String, List<Envelope>> list = new HashMap<>();
@@ -444,7 +444,7 @@ public class HyperZMQ implements AutoCloseable {
      */
     public boolean sendContractsToChain(String groupName, Map<Contract, IContractProcessingCallback> map) {
         if (groupName == null || map.isEmpty()) {
-            print("Empty group and/or contracts");
+            printErr("Empty group and/or contracts");
             return false;
         }
         List<Envelope> envelopes = new ArrayList<>();
@@ -460,7 +460,7 @@ public class HyperZMQ implements AutoCloseable {
 
     public boolean sendContractToChain(String groupName, Contract contract) {
         if (groupName == null || contract == null) {
-            print("Empty group and/or contract!");
+            printErr("Empty group and/or contract!");
             return false;
         }
         // Wrap the contract - the complete envelope will be encrypted
@@ -470,7 +470,7 @@ public class HyperZMQ implements AutoCloseable {
 
     private boolean sendReceiptToChain(String groupName, ContractReceipt receipt, String resultOutputAddr) {
         if (groupName == null || receipt == null) {
-            print("Empty group and/or receipt!");
+            printErr("Empty group and/or receipt!");
             return false;
         }
 
@@ -495,7 +495,8 @@ public class HyperZMQ implements AutoCloseable {
      */
     public void createGroup(String groupName, IGroupCallback callback) {
         if (reservedGroupNames.contains(groupName)) {
-            throw new IllegalArgumentException("The group name is reserved, try another one");
+            printErr("The group name is reserved, try another one");
+            return;
         }
 
         crypto.createGroup(groupName);
@@ -895,10 +896,10 @@ public class HyperZMQ implements AutoCloseable {
         }
         */
         String address = SawtoothUtils.namespaceHashAddress(BlockchainHelper.KEY_EXCHANGE_RECEIPT_NAMESPACE, groupName);
-        print("Getting members of group '" + groupName + "' at address " + address);
+        //print("Getting members of group '" + groupName + "' at address " + address);
         String resp = blockchainHelper.getStateZMQ(address);
         if (resp == null || resp.isEmpty()) return new ArrayList<>();
-        print("getGroupMembers: " + resp);
+        print("getGroupMembers of " + groupName + ": " + resp);
         return new ArrayList<>(Arrays.asList(resp.split(",")));
     }
 
@@ -932,8 +933,10 @@ public class HyperZMQ implements AutoCloseable {
     }
 
     public void debugClearGroupMembers(String group) {
+        print("debugClearGroupMembers for " + group);
         Transaction t = blockchainHelper.keyExchangeReceiptTransaction("CLEARALL," + group);
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
+        System.out.println("returning...");
     }
 
     public Signer getSawtoothSigner() {
@@ -1135,6 +1138,7 @@ public class HyperZMQ implements AutoCloseable {
      * Request to disband the group by sending a message to the blockchain inside the group.
      * Since this client will receive the event as well, the group will be removed for this client automatically
      * without the need to call {@link HyperZMQ#removeGroup}
+     *
      * @param groupName group name to disband
      */
     public void requestDisbandGroup(String groupName) {
