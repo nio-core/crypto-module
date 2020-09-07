@@ -2,6 +2,7 @@ package util;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+
 import java.security.SecureRandom;
 
 public class Utilities {

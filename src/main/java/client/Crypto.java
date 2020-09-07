@@ -3,26 +3,21 @@ package client;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Nullable;
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PrivateKey;
 import sawtooth.sdk.signing.Signer;
 
-import static client.Storage.DATA_ENCRYPTION_KEY_ALIAS;
-import static client.Storage.DEFAULT_KEYSTORE_PATH;
-import static client.Storage.SAWTOOTHER_SIGNER_KEY;
+import javax.annotation.Nullable;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.util.*;
+
+import static client.Storage.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Crypto {
@@ -163,11 +158,12 @@ public class Crypto {
 
     void createGroup(String name) throws IllegalArgumentException {
         if (groupKeys.containsKey(name)) {
-            throw new IllegalArgumentException("Name already in use");
+            throw new IllegalArgumentException("Name '" + name + "' already in use");
         }
         groupKeys.put(name, generateSecretKey());
         save();
-        //log.info("created group " + name + " with key (b64) " + Base64.getEncoder().encodeToString(_keys.get(name).getEncoded()));
+        //log.info("created group " + name + " withdown
+        // key (b64) " + Base64.getEncoder().encodeToString(_keys.get(name).getEncoded()));
     }
 
     void addGroup(String groupName, String key) {

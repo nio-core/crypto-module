@@ -1,7 +1,6 @@
 package joingroup;
 
 import client.HyperZMQ;
-import java.util.Collections;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Test;
@@ -73,7 +72,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         // Prepare Voting behavior - member2 should be responsible for the voting
         member2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         member2.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(member2));
-        member2.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, "member2"));
+        member2.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator("member2"));
 
         Thread.sleep(1000); // Wait a moment for member1 to send the KeyExchangeReceipt for the group it created
 

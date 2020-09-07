@@ -1,11 +1,12 @@
 package diffiehellman;
 
 import client.Crypto;
+
+import javax.crypto.SecretKey;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.GeneralSecurityException;
-import javax.crypto.SecretKey;
 
 public class EncryptedStream implements AutoCloseable {
     private final PrintWriter out;
@@ -42,6 +43,7 @@ public class EncryptedStream implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        //System.err.println("Closing streams...");
         in.close();
         out.close();
     }

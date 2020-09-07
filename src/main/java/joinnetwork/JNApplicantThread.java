@@ -4,15 +4,6 @@ import blockchain.SawtoothUtils;
 import client.JoinNetworkExtension;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ConnectException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Map;
-import javax.annotation.Nullable;
 import joingroup.JoinRequest;
 import messages.JNChallengeMessage;
 import messages.JNResponseMessage;
@@ -21,6 +12,16 @@ import sawtooth.sdk.signing.Signer;
 import util.PubSocket;
 import util.Utilities;
 import voting.JoinRequestType;
+
+import javax.annotation.Nullable;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ConnectException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Map;
 
 /**
  * The Thread for an applicant that wants to join the network.

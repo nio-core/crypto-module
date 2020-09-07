@@ -1,8 +1,9 @@
 package groups;
 
 import com.google.gson.Gson;
-import java.util.UUID;
+
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 /**
  * The envelope is encrypted and used as payload for {@link GroupMessage}.

@@ -5,28 +5,18 @@ import diffiehellman.EncryptedStream;
 import groups.Envelope;
 import groups.GroupMessage;
 import groups.MessageType;
-import java.net.ConnectException;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import javax.annotation.Nullable;
 import joingroup.JoinRequest;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
 import subgrouping.ISubgroupSelector;
-import voting.IVoteEvaluator;
-import voting.IVoteStatusCallback;
-import voting.IVotingProcess;
-import voting.IVotingStrategy;
-import voting.JoinRequestType;
-import voting.Vote;
-import voting.VotingMatter;
-import voting.VotingResult;
+import voting.*;
+
+import javax.annotation.Nullable;
+import java.net.ConnectException;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class VoteManager {
 
@@ -44,7 +34,7 @@ public class VoteManager {
 
     // Variables for selecting a subgroup of participants when voting
     private ISubgroupSelector subgroupSelector = null;
-    private int votingParticipantsThreshold = 5;
+    private int votingParticipantsThreshold = 100; // FIXME
 
     // The VotingProcess implements the behavior for when this client is the vote leader
     private IVotingProcess votingProcessGroup = null;
@@ -61,7 +51,7 @@ public class VoteManager {
     private IVoteStatusCallback statusCallback = null;
 
     private int votingProcessTimeoutMS = 3000;
-    private final boolean doPrint = true;
+    private final boolean doPrint = false;
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;

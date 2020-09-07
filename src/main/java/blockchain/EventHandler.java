@@ -3,26 +3,16 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
 import groups.GroupMessage;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import joingroup.JoinRequest;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
-import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
-import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
-import sawtooth.sdk.protobuf.Event;
-import sawtooth.sdk.protobuf.EventFilter;
-import sawtooth.sdk.protobuf.EventList;
-import sawtooth.sdk.protobuf.EventSubscription;
-import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.*;
 import sawtooth.sdk.protobuf.Message.MessageType;
 import util.Utilities;
+
+import java.util.NoSuchElementException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EventHandler implements AutoCloseable {
     private final HyperZMQ hyperzmq;
@@ -41,19 +31,15 @@ public class EventHandler implements AutoCloseable {
 
     private int receiveTimeoutMS = 700;
     private final ZContext context;
+    private boolean doPrint = false;
 
     public EventHandler(HyperZMQ callback) {
         this.hyperzmq = callback;
         context = new ZContext();
         this.socket = context.createSocket(ZMQ.DEALER);
-        //this.sendSocket = context.createSocket(ZMQ.DEALER);
         this.socket.setReceiveTimeOut(receiveTimeoutMS);
         startListenerLoop();
         startEventDistributorLoop();
-        // Automatically subscribe to the AllChat
-        queueNewSubscription("AllChat", EventFilter.newBuilder()
-                .setFilterType(EventFilter.FilterType.REGEX_ANY)
-                .build());
     }
 
     void startEventDistributorLoop() {
@@ -91,8 +77,7 @@ public class EventHandler implements AutoCloseable {
                         }
                         // TODO distribute events here depending on type
                         for (Event e : list.getEventsList()) {
-                            String received = e.toString();
-                            // print("Received Event: " + received);
+                            // print("Received Event: " + e.toString());
                             // Group Messages (CSVStrings)
                             // Check whether the event is a new encrypted message or a JoinGroup request
                             // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address
@@ -111,7 +96,7 @@ public class EventHandler implements AutoCloseable {
 
                                     // Check if we can access the requested key beforehand
                                     if (!hyperzmq.isGroupAvailable(request.getGroupName())) {
-                                        print("Client does not have the key that was requested!");
+                                        printErr("Client does not have the key that was requested!");
                                         continue;
                                     }
 
@@ -132,7 +117,7 @@ public class EventHandler implements AutoCloseable {
                             if (groupMessage != null) {
                                 hyperzmq.newEventReceived(groupMessage.group, groupMessage.payload);
                             } else {
-                                print("Deserialization failed!");
+                                printErr("Deserialization failed!");
                             }
 
                         }
@@ -154,7 +139,7 @@ public class EventHandler implements AutoCloseable {
                         break;
                     }
                     default: {
-                        print("Received message has unknown type: " + messageReceived.toString());
+                        printErr("Received message has unknown type: " + messageReceived.toString());
                         break;
                     }
                 }
@@ -250,7 +235,12 @@ public class EventHandler implements AutoCloseable {
     }
 
     private void print(String msg) {
-        System.out.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
+        if (doPrint)
+            System.out.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
+    }
+
+    private void printErr(String msg) {
+        System.err.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
     }
 
     public void setValidatorURL(String validatorURL) {
@@ -258,7 +248,7 @@ public class EventHandler implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         runDistributorLoop.set(false);
         runListenerLoop.set(false);
         socket.close();

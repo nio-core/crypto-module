@@ -1,11 +1,12 @@
 package util;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.junit.Assert;
 import org.junit.Test;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AsyncSocketTest implements IAsyncSubSocketCallback {
 

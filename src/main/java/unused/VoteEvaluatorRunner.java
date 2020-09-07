@@ -1,8 +1,9 @@
 package unused;
 
-import java.util.concurrent.Callable;
 import voting.IVoteEvaluator;
 import voting.VotingResult;
+
+import java.util.concurrent.Callable;
 
 public class VoteEvaluatorRunner implements Callable<Boolean> {
 

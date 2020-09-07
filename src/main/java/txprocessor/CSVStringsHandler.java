@@ -4,14 +4,6 @@ import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import groups.GroupMessage;
-import java.text.SimpleDateFormat;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import joingroup.JoinRequest;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -20,13 +12,16 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
 
+import java.text.SimpleDateFormat;
+import java.util.*;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CSVStringsHandler implements TransactionHandler {
     private final String namespace = "2f9d35";
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
-    private final String GROUP_MESSAGE_VERSION = "1.0.0";
+    private boolean doPrint = false;
 
     public CSVStringsHandler() {
         // Convention
@@ -141,6 +136,7 @@ public class CSVStringsHandler implements TransactionHandler {
     }
 
     void print(String message) {
-        System.out.println("[CSVStringTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
+        if (doPrint)
+            System.out.println("[CSVStringTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }

@@ -1,12 +1,6 @@
 package joingroup;
 
 import client.HyperZMQ;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Assert;
@@ -15,6 +9,13 @@ import subgrouping.RandomSubgroupSelector;
 import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EvalScenario1 {
     // Use static keys so the member entry in the blockchain does not get flooded
@@ -48,7 +49,7 @@ public class EvalScenario1 {
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         originalClient.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(originalClient));
         originalClient.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
+                new SimpleMajorityEvaluator("originalClient"));
 
         // TODO test with selection before voting
         originalClient.getVoteManager().setVotingParticipantsThreshold(10);
@@ -104,7 +105,7 @@ public class EvalScenario1 {
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         originalClient.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(originalClient));
         originalClient.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "originalClient"));
+                new SimpleMajorityEvaluator("originalClient"));
 
         originalClient.getVoteManager().setVotingParticipantsThreshold(500);
         originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
@@ -199,22 +200,22 @@ public class EvalScenario1 {
         client1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         client1.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client1));
         client1.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "client1"));
+                new SimpleMajorityEvaluator("client1"));
 
         client2.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         client2.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client2));
         client2.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "client2"));
+                new SimpleMajorityEvaluator("client2"));
 
         client3.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         client3.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client3));
         client3.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "client3"));
+                new SimpleMajorityEvaluator("client3"));
 
         client4.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
         client4.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(client4));
         client4.getVoteManager().setVoteEvaluator(
-                new SimpleMajorityEvaluator(Collections.emptyList(), false, "client4"));
+                new SimpleMajorityEvaluator("client4"));
 
 
         // Client1 creates the new group

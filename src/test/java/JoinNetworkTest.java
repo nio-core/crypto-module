@@ -1,8 +1,6 @@
 import client.HyperZMQ;
 import client.JoinHelper;
 import client.JoinNetworkExtension;
-import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
 import joinnetwork.IJoinNetworkStatusCallback;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,6 +8,9 @@ import subgrouping.RandomSubgroupSelector;
 import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
+
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JoinNetworkTest {
 
@@ -53,7 +54,7 @@ public class JoinNetworkTest {
         member.getVoteManager().setVotingProcessNetwork(new GroupVotingProcess(member));
         member.getVoteManager().setVotingStrategyNetwork(new YesVoteStrategy(50));
         member.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector(), 5);
-        member.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(Collections.emptyList(), false, member.getClientID()));
+        member.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(member.getClientID()));
 
         member.setValidatorAddressToSend("192.168.178.90:4004"); // validator default port is 4004
 

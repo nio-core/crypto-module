@@ -4,14 +4,6 @@ import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.processor.Context;
@@ -23,6 +15,9 @@ import sawtooth.sdk.signing.PublicKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Secp256k1PublicKey;
 
+import java.text.SimpleDateFormat;
+import java.util.*;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class KeyExReceiptHandler implements TransactionHandler {
@@ -30,7 +25,8 @@ public class KeyExReceiptHandler implements TransactionHandler {
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
     private static final String TRANSACTION_FAMILY_NAME = "KeyExchangeReceipt";
     private static final String TRANSACTION_FAMILY_VERSION = "0.1";
-    private String namespace = "ac0cab";
+    private final String namespace = "ac0cab";
+    private boolean doPrint = false;
 
     public KeyExReceiptHandler() {
         // Convention
@@ -183,7 +179,8 @@ public class KeyExReceiptHandler implements TransactionHandler {
     }
 
     private void print(String message) {
-        System.out.println("[KeyExchangeReceiptTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
+        if (doPrint)
+            System.out.println("[KeyExchangeReceiptTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }
 

@@ -2,13 +2,10 @@ package blockchain;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import java.nio.charset.StandardCharsets;
 import sawtooth.sdk.processor.Utils;
-import sawtooth.sdk.signing.PrivateKey;
-import sawtooth.sdk.signing.PublicKey;
-import sawtooth.sdk.signing.Secp256k1Context;
-import sawtooth.sdk.signing.Secp256k1PrivateKey;
-import sawtooth.sdk.signing.Secp256k1PublicKey;
+import sawtooth.sdk.signing.*;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Collect all Sawtooth related helper methods here,

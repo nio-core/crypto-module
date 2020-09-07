@@ -1,6 +1,13 @@
 package diffiehellman;
 
 import blockchain.SawtoothUtils;
+import sawtooth.sdk.signing.Signer;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -8,25 +15,12 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.SignatureException;
+import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.Callable;
-import javax.crypto.KeyAgreement;
-import javax.crypto.SecretKey;
-import javax.crypto.interfaces.DHPublicKey;
-import javax.crypto.spec.DHParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import sawtooth.sdk.signing.Signer;
 
 public class DHKeyExchange implements Callable<EncryptedStream> {
 
@@ -58,6 +52,7 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
     public EncryptedStream call() throws Exception {
         // Setup sockets and streams
         Socket socket;
+        System.err.println("[DH]" + myID + ": port=" + port);
         if (isServer) {
             print("Setting up server");
             ServerSocket serverSocket = new ServerSocket(port);

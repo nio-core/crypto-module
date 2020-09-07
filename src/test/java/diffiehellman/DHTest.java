@@ -1,11 +1,12 @@
 package diffiehellman;
 
 import client.HyperZMQ;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class DHTest {
 

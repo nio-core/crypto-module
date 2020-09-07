@@ -2,17 +2,18 @@ package joinnetwork;
 
 import blockchain.SawtoothUtils;
 import client.JoinNetworkExtension;
+import joingroup.JoinRequest;
+import messages.JNChallengeMessage;
+import messages.JNResponseMessage;
+import sawtooth.sdk.signing.Signer;
+import util.Utilities;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import joingroup.JoinRequest;
-import messages.JNChallengeMessage;
-import messages.JNResponseMessage;
-import sawtooth.sdk.signing.Signer;
-import util.Utilities;
 
 /**
  * This is the thread for the Network member that authenticates an applicant using challenge response.
