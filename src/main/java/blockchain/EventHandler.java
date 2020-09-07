@@ -3,28 +3,16 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.InvalidProtocolBufferException;
 import groups.GroupMessage;
-
-import java.util.NoSuchElementException;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import joingroup.JoinRequest;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
-import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
-import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
-import sawtooth.sdk.protobuf.Event;
-import sawtooth.sdk.protobuf.EventFilter;
-import sawtooth.sdk.protobuf.EventList;
-import sawtooth.sdk.protobuf.EventSubscription;
-import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.*;
 import sawtooth.sdk.protobuf.Message.MessageType;
 import util.Utilities;
+
+import java.util.NoSuchElementException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EventHandler implements AutoCloseable {
     private final HyperZMQ hyperzmq;

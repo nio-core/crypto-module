@@ -1,10 +1,6 @@
 package unused;
 
 import client.HyperZMQ;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.Callable;
-import javax.annotation.Nullable;
 import joingroup.JoinRequest;
 import sawtooth.sdk.signing.Signer;
 import subgrouping.ISubgroupSelector;
@@ -12,6 +8,11 @@ import voting.IVoteEvaluator;
 import voting.IVotingProcess;
 import voting.VotingMatter;
 import voting.VotingResult;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 
 public class VoteProcessRunner implements Callable<Boolean> {
 

@@ -1,13 +1,14 @@
 package client;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import joingroup.JoinRequest;
 import joinnetwork.JNMemberThread;
 import util.AsyncSubSocket;
 import util.IAsyncSubSocketCallback;
 import util.Utilities;
 import voting.JoinRequestType;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This class can be added OPTIONALLY to a HyperZMQ instance to make it listen for clients that want to join the network.

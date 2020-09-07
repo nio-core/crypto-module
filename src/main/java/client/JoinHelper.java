@@ -1,15 +1,16 @@
 package client;
 
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import javax.annotation.Nullable;
 import joinnetwork.IJoinNetworkStatusCallback;
 import joinnetwork.JNApplicantThread;
 import sawtooth.sdk.signing.Context;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.Secp256k1Context;
 import sawtooth.sdk.signing.Signer;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class JoinHelper {
 

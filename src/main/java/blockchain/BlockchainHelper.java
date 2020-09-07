@@ -3,13 +3,16 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import keyexchange.KeyExchangeReceipt;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import sawtooth.sdk.protobuf.*;
+import sawtooth.sdk.signing.Signer;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import javax.annotation.Nullable;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -18,24 +21,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
-
-import keyexchange.KeyExchangeReceipt;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
-import sawtooth.sdk.protobuf.Batch;
-import sawtooth.sdk.protobuf.BatchHeader;
-import sawtooth.sdk.protobuf.BatchList;
-import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
-import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
-import sawtooth.sdk.protobuf.ClientStateGetRequest;
-import sawtooth.sdk.protobuf.ClientStateGetResponse;
-import sawtooth.sdk.protobuf.Message;
-import sawtooth.sdk.protobuf.Transaction;
-import sawtooth.sdk.protobuf.TransactionHeader;
-import sawtooth.sdk.signing.Signer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -51,7 +36,7 @@ public class BlockchainHelper {
     public static final String KEY_EXCHANGE_RECEIPT_NAMESPACE = "ac0cab";
     public static final String CSVSTRINGS_FAMILY = "csvstrings";
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
-    private final boolean doPrint = true;
+    private final boolean doPrint = false;
 
     private String validatorAddress;
 

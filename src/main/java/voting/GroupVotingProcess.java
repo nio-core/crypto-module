@@ -2,6 +2,7 @@ package voting;
 
 import client.HyperZMQ;
 import groups.IGroupVoteReceiver;
+
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -28,7 +29,7 @@ public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     @Override
     public VotingResult vote(VotingMatter votingMatter, int timeInMs) {
-        System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING -- desired Voters: " + votingMatter.getDesiredVoters().toString());
+        //System.out.println("[" + Thread.currentThread().getId() + "] [GroupInternVotingProcess]  STARTING -- desired Voters: " + votingMatter.getDesiredVoters().toString());
         // Register callback to evaluate the votes
         hyperZMQ.addGroupVoteReceiver(this);
 
@@ -62,7 +63,7 @@ public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     @Override
     public void voteReceived(Vote vote, String group) {
-        System.out.println("Received vote: " + vote.toString());
+        //System.out.println("Received vote: " + vote.toString());
         try {
             resultBuffer.put(vote);
         } catch (InterruptedException e) {

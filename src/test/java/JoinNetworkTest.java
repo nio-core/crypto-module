@@ -1,10 +1,6 @@
 import client.HyperZMQ;
 import client.JoinHelper;
 import client.JoinNetworkExtension;
-
-import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import joinnetwork.IJoinNetworkStatusCallback;
 import org.junit.Assert;
 import org.junit.Test;
@@ -12,6 +8,9 @@ import subgrouping.RandomSubgroupSelector;
 import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
+
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JoinNetworkTest {
 

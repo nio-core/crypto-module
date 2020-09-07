@@ -1,12 +1,6 @@
 package joingroup;
 
 import client.HyperZMQ;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Assert;
@@ -15,6 +9,13 @@ import subgrouping.RandomSubgroupSelector;
 import voting.GroupVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EvalScenario1 {
     // Use static keys so the member entry in the blockchain does not get flooded

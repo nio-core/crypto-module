@@ -9,29 +9,7 @@ import contracts.IContractProcessingCallback;
 import contracts.IContractProcessor;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
-import groups.Envelope;
-import groups.GroupMessage;
-import groups.IGroupCallback;
-import groups.IGroupVoteReceiver;
-import groups.MessageType;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import groups.*;
 import joingroup.IJoinGroupStatusCallback;
 import joingroup.JoinRequest;
 import keyexchange.KeyExchangeReceipt;
@@ -48,6 +26,16 @@ import voting.JoinRequestType;
 import voting.Vote;
 import voting.VotingMatter;
 import zmq.io.mechanism.curve.Curve;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -936,7 +924,10 @@ public class HyperZMQ implements AutoCloseable {
         print("debugClearGroupMembers for " + group);
         Transaction t = blockchainHelper.keyExchangeReceiptTransaction("CLEARALL," + group);
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
-        System.out.println("returning...");
+    }
+
+    public void debugClearGroups() {
+        this.crypto.getGroupNames().forEach(this.crypto::removeGroup);
     }
 
     public Signer getSawtoothSigner() {
@@ -1026,8 +1017,8 @@ public class HyperZMQ implements AutoCloseable {
                 } else if (received.equals("Vote denied")) {
                     notifyCallback(IJoinGroupStatusCallback.VOTE_DENIED, callback);
                 } else {
-                    notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, received, callback);
                     addGroup(request.getGroupName(), received);
+                    notifyCallback(IJoinGroupStatusCallback.KEY_RECEIVED, received, callback);
                 }
             } catch (ExecutionException e) {
                 e.printStackTrace();
@@ -1086,12 +1077,12 @@ public class HyperZMQ implements AutoCloseable {
         GroupMessage groupMessage = new GroupMessage(groupName, payload, true, true);
 
         Transaction t = blockchainHelper.csvStringsTransaction(groupMessage.getBytes());
-        print("Sending VotingMatter in group: " + groupMessage.toString());
+        //print("Sending VotingMatter in group: " + groupMessage.toString());
         blockchainHelper.buildAndSendBatch(Collections.singletonList(t));
     }
 
     private void handleVotingMatter(String group, Envelope envelope) {
-        print("HandleVotingMatter: " + envelope.toString());
+        //print("HandleVotingMatter: " + envelope.toString());
         VotingMatter matter;
         try {
             matter = new Gson().fromJson(envelope.getRawMessage(), VotingMatter.class);

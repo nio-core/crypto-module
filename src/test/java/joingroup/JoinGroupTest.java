@@ -1,7 +1,6 @@
 package joingroup;
 
 import client.HyperZMQ;
-import java.util.Collections;
 import keyexchange.KeyExchangeReceipt;
 import keyexchange.ReceiptType;
 import org.junit.Test;
