@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * This implementation requires ALL specified voters (or timeout).
  */
-public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
+public class SawtoothVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final HyperZMQ hyperZMQ;
 
@@ -23,7 +23,7 @@ public class GroupVotingProcess implements IVotingProcess, IGroupVoteReceiver {
 
     private final BlockingQueue<Vote> resultBuffer = new ArrayBlockingQueue<Vote>(100);
 
-    public GroupVotingProcess(HyperZMQ hyperZMQ) {
+    public SawtoothVotingProcess(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
     }
 

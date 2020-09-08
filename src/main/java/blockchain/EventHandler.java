@@ -19,7 +19,6 @@ public class EventHandler implements AutoCloseable {
     static final String CORRELATION_ID = "123";
 
     private String validatorURL = "";
-    private final ZMQ.Socket socket;
 
     private final AtomicBoolean runListenerLoop = new AtomicBoolean(true);
     private final AtomicBoolean runDistributorLoop = new AtomicBoolean(true);
@@ -30,22 +29,18 @@ public class EventHandler implements AutoCloseable {
     private final BlockingQueue<Message> subscriptionQueue = new ArrayBlockingQueue<Message>(100);
 
     private int receiveTimeoutMS = 700;
-    private final ZContext context;
     private boolean doPrint = false;
 
-    public EventHandler(HyperZMQ callback) {
+    public EventHandler(HyperZMQ callback, String validatorURL) {
         this.hyperzmq = callback;
-        context = new ZContext();
-        this.socket = context.createSocket(ZMQ.DEALER);
-        this.socket.setReceiveTimeOut(receiveTimeoutMS);
+        this.validatorURL = validatorURL == null ? ValidatorAddress.VALIDATOR_URL_DEFAULT : validatorURL;
         startListenerLoop();
         startEventDistributorLoop();
     }
 
     void startEventDistributorLoop() {
         runDistributorLoop.set(true);
-        Thread t = new Thread(this::eventDistributorLoop);
-        eventDistributionExecutor.submit(t);
+        eventDistributionExecutor.submit(new Thread(this::eventDistributorLoop));
     }
 
     void stopEventDistributor() {
@@ -54,7 +49,7 @@ public class EventHandler implements AutoCloseable {
     }
 
     /**
-     * This loop distributes the events that received by the socket to the corresponding queues
+     * This loop distributes the events that are received by the socket to the corresponding queues
      */
     private void eventDistributorLoop() {
         //print("Starting EventDistributorLoop...");
@@ -151,9 +146,12 @@ public class EventHandler implements AutoCloseable {
         // The loop consists of the socket receiving with a timeout.
         // After each receive, the queue is checked whether there are messages to send
         Thread t = new Thread(() -> {
+            ZContext context = new ZContext();
+            ZMQ.Socket socket = context.createSocket(ZMQ.DEALER);
+            socket.setReceiveTimeOut(receiveTimeoutMS);
             //print("Connecting to: " + getValidatorURL());
             //print("Starting EventListenerLoop...");
-            socket.connect(getValidatorURL());
+            socket.connect(this.validatorURL);
             while (runListenerLoop.get()) {
                 // If something is in the queue, send that message
                 Message messageToSent = null;
@@ -170,9 +168,7 @@ public class EventHandler implements AutoCloseable {
                 }
 
                 // Try to receive a message
-                //print("!!!Receiving Event...!!!");
                 byte[] recv = socket.recv();
-                //print("!!!Receiving end!!!");
                 if (recv != null) {
                     try {
                         Message messageReceived = Message.parseFrom(recv);
@@ -184,7 +180,10 @@ public class EventHandler implements AutoCloseable {
             }
             // End while
             print("Exiting EventListenerLoop...");
+            System.err.println(hyperzmq.getClientID() + "  closing event socket...");
+            socket.disconnect(this.validatorURL);
             socket.close();
+            context.close();
         });
         t.start();
     }
@@ -230,10 +229,6 @@ public class EventHandler implements AutoCloseable {
         // ClientEventsUnsubscribeRequest request = ClientEventsUnsubscribeRequest.newBuilder().
     }
 
-    private String getValidatorURL() {
-        return validatorURL.isEmpty() ? ValidatorAddress.VALIDATOR_URL_DEFAULT : validatorURL;
-    }
-
     private void print(String msg) {
         if (doPrint)
             System.out.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
@@ -251,8 +246,9 @@ public class EventHandler implements AutoCloseable {
     public void close() {
         runDistributorLoop.set(false);
         runListenerLoop.set(false);
-        socket.close();
-        context.close();
+        //System.err.println(hyperzmq.getClientID() + "  closing event socket...");
+        //socket.close();
+        //context.close();
     }
 }
 

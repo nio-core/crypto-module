@@ -83,6 +83,15 @@ public class GroupBuildingRunnable implements Runnable {
                 e.printStackTrace();
             }
         }
+/*
+        for (HyperZMQ agent : agents) {
+            try {
+                agent.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+*/
         /*
         agents.get(0).requestDisbandGroup(groupName);
 

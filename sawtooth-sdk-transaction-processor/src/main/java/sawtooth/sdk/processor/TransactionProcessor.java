@@ -114,7 +114,7 @@ public class TransactionProcessor implements Runnable {
             .setFamily(handler.transactionFamilyName())
             .addAllNamespaces(handler.getNameSpaces())
             .setVersion(handler.getVersion())
-            .setMaxOccupancy(1)
+            .setMaxOccupancy(100)
             .build();
     try {
       Future fut =

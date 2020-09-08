@@ -16,7 +16,7 @@ public class JoinRequest {
     private final JoinRequestType type;
 
     // The applicant can give some additional info that could be evaluated when members cast their vote
-    private final Map<String, String> votingArgs;
+    public Map<String, String> votingArgs;
 
     // The address+port on which the applicant will wait for a response (applicant will act as "server")
     private final String address;
@@ -43,10 +43,6 @@ public class JoinRequest {
 
     public String getGroupName() {
         return groupName;
-    }
-
-    public Map<String, String> getVotingArgs() {
-        return votingArgs;
     }
 
     public String getAddress() {

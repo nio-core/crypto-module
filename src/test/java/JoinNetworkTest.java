@@ -5,7 +5,7 @@ import joinnetwork.IJoinNetworkStatusCallback;
 import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
-import voting.GroupVotingProcess;
+import voting.SawtoothVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
 
@@ -51,7 +51,7 @@ public class JoinNetworkTest {
             System.out.println("created network voters");
         }
 
-        member.getVoteManager().setVotingProcessNetwork(new GroupVotingProcess(member));
+        member.getVoteManager().setVotingProcessNetwork(new SawtoothVotingProcess(member));
         member.getVoteManager().setVotingStrategyNetwork(new YesVoteStrategy(50));
         member.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector(), 5);
         member.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(member.getClientID()));

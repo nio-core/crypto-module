@@ -47,7 +47,7 @@ public class HyperZMQ implements AutoCloseable {
     private final List<IContractProcessor> contractProcessors = new ArrayList<>();
     private final Map<String, List<IGroupCallback>> textmessageCallbacks = new HashMap<>();
     private final Map<String, IContractProcessingCallback> contractCallbacks = new HashMap<>(); // key is the contractID
-    final BlockchainHelper blockchainHelper;
+    public final BlockchainHelper blockchainHelper;
     private final ZContext zContext = new ZContext();
 
     private final VoteManager voteManager;
@@ -95,7 +95,7 @@ public class HyperZMQ implements AutoCloseable {
         this.validatorAddress = validatorAddress != null ? validatorAddress : ValidatorAddress.VALIDATOR_URL_DEFAULT;
 
         this.crypto = new Crypto(this, pathToKeyStore, keystorePassword.toCharArray(), dataFilePath, createNewStore);
-        this.eventHandler = new EventHandler(this);
+        this.eventHandler = new EventHandler(this, this.validatorAddress);
         this.blockchainHelper = new BlockchainHelper(this);
         this.voteManager = new VoteManager(this);
         this.messageFactory = new MessageFactory(getSawtoothSigner());
@@ -762,7 +762,7 @@ public class HyperZMQ implements AutoCloseable {
         }
     }
 
-    String encryptEnvelope(String group, Envelope envelope) {
+    public String encryptEnvelope(String group, Envelope envelope) {
         // Create the payload in CSV format
         // The group stays in clearText so clients attempting to decrypt can know if they can without trial and error
         StringBuilder msgBuilder = new StringBuilder();
@@ -887,7 +887,7 @@ public class HyperZMQ implements AutoCloseable {
         //print("Getting members of group '" + groupName + "' at address " + address);
         String resp = blockchainHelper.getStateZMQ(address);
         if (resp == null || resp.isEmpty()) return new ArrayList<>();
-        print("getGroupMembers of " + groupName + ": " + resp);
+        //print("getGroupMembers of " + groupName + ": " + resp);
         return new ArrayList<>(Arrays.asList(resp.split(",")));
     }
 
@@ -1093,7 +1093,7 @@ public class HyperZMQ implements AutoCloseable {
         if (matter.getDesiredVoters().contains(getSawtoothPublicKey())) {
             voteManager.addVoteRequired(matter);
         } else {
-            print("This client is not required to vote on the matter.");
+            //print("This client is not required to vote on the matter.");
         }
     }
 

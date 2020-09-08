@@ -16,9 +16,12 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Time;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,6 +41,10 @@ public class BlockchainHelper {
     public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
     private final boolean doPrint = false;
 
+    private final BlockingQueue<BatchList> batchListQueue = new ArrayBlockingQueue<BatchList>(100);
+    private final AtomicBoolean runSender = new AtomicBoolean(true);
+    private final ExecutorService senderExecutor = Executors.newSingleThreadExecutor();
+
     private String validatorAddress;
 
     public BlockchainHelper(HyperZMQ hyperZMQ) {
@@ -47,6 +54,8 @@ public class BlockchainHelper {
 
         submitSocket = zContext.createSocket(ZMQ.DEALER);
         submitSocket.connect(hyperZMQ.getValidatorAddress());
+
+        senderExecutor.submit(new Thread(this::batchSenderLoop));
     }
 
     public void setValidatorAddress(String validatorAddress) {
@@ -63,10 +72,6 @@ public class BlockchainHelper {
 
     public void setBaseRestAPIUrl(String baseRestAPIUrl) {
         this.baseRestAPIUrl = baseRestAPIUrl;
-    }
-
-    public Transaction allChatTransaction(byte[] bytes) {
-        return buildTransaction("AllChat", "0.1", bytes);
     }
 
     public Transaction csvStringsTransaction(byte[] payload) {
@@ -165,7 +170,9 @@ public class BlockchainHelper {
                 .addBatches(batch)
                 .build();
 
-        return sendBatchListZMQ(batchList);
+        batchListQueue.add(batchList);
+
+        return true;
     }
 
     private boolean sendBatchListZMQ(BatchList batchList) {
@@ -327,4 +334,31 @@ public class BlockchainHelper {
     private void printErr(String message) {
         System.err.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
     }
+
+    private void batchSenderLoop() {
+        print("Starting BatchSender...");
+        while (this.runSender.get()) {
+            BatchList list = null;
+            try {
+                list = batchListQueue.poll(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (list != null) {
+                sendBatchListZMQ(list);
+            }
+        }
+        print("Stopping BatchSender...");
+    }
+
+    void stopSender() {
+        this.runSender.set(false);
+    }
+
+    void runSender() {
+        this.runSender.set(true);
+        senderExecutor.submit(new Thread(this::batchSenderLoop));
+    }
+
 }

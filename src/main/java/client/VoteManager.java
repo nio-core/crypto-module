@@ -48,9 +48,15 @@ public class VoteManager {
 
     private IVoteEvaluator voteEvaluator = null;
 
+    private IVoteSender voteSender = null;
+
+    public void setVoteSender(IVoteSender voteSender) {
+        this.voteSender = voteSender;
+    }
+
     private IVoteStatusCallback statusCallback = null;
 
-    private int votingProcessTimeoutMS = 3000;
+    private int votingProcessTimeoutMS = 5000;
     private final boolean doPrint = false;
 
     public VoteManager(HyperZMQ hyperZMQ) {
@@ -110,16 +116,7 @@ public class VoteManager {
                             print("NetworkVoters group is not available on this client");
                         }
                     } else if (matter.getJoinRequest().getType().equals(JoinRequestType.GROUP)) {
-                        // If the votingMatter was about joining group, sent the vote back in the specified group
-                        // TODO make this more generic?
-
-                        String payload = hyperZMQ.encryptEnvelope(matter.getJoinRequest().getGroupName(), env);
-                        // TODO write to chain behavior
-                        GroupMessage message = new GroupMessage(matter.getJoinRequest().getGroupName(), payload, false, true);
-                        Transaction transaction = hyperZMQ.blockchainHelper.
-                                csvStringsTransaction(message.getBytes());
-
-                        hyperZMQ.blockchainHelper.buildAndSendBatch(Collections.singletonList(transaction));
+                        this.voteSender.sendVote(this.hyperZMQ, vote, matter.getJoinRequest().getGroupName(), matter.getJoinRequest().votingArgs);
                     } else {
                         print("Voting matter is of type " + matter.getJoinRequest().getType() + ", no way of sending the vote back registered");
                     }

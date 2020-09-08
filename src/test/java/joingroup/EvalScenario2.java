@@ -4,14 +4,9 @@ import client.HyperZMQ;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
 import txprocessor.CombinedTP;
-import voting.GroupVotingProcess;
-import voting.SimpleMajorityEvaluator;
-import voting.YesVoteStrategy;
+import voting.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.OptionalDouble;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 
@@ -25,22 +20,22 @@ public class EvalScenario2 {
         //+----------------------------------------------------------------------------------------
         //                      PARAMETERS
         //-----------------------------------------------------------------------------------------
-        int numOfGroups = 2;
-        int numOfAgentsInGroup = 25;
+        int numOfGroups = 10;
+        int numOfAgentsInGroup = 5;
         int numOfAgents = numOfAgentsInGroup * numOfGroups;
         String groupName = "testgroup";
         int numOfRuns = 1;
         int numOfWarmups = 0;
+        int threadDelayMS = 1500;
+
 
         CombinedTP.main(null);
-        CombinedTP.main(null);
-        CombinedTP.main(null);
-        Thread.sleep(1000);
+
+        Thread.sleep(1500);
 
         //+----------------------------------------------------------------------------------------
         //                      TEST SETUP
         //-----------------------------------------------------------------------------------------
-
         List<HyperZMQ> agents = new ArrayList<>();
         List<List<HyperZMQ>> groupsList = new ArrayList<>();
         groupsList.add(new ArrayList<>());
@@ -50,7 +45,13 @@ public class EvalScenario2 {
             HyperZMQ tmp = new HyperZMQ.Builder("agent" + String.valueOf(i + 1), "whatever").build();
             tmp.isVolatile = true; // Don't save any data
             tmp.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(tmp.getClientID()));
-            tmp.getVoteManager().setVotingProcessGroup(new GroupVotingProcess(tmp));
+
+            tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
+            tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
+
+            //tmp.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(tmp, 60001 + i));
+            //tmp.getVoteManager().setVoteSender(new ZMQVoteSender());
+
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(0));
 
             tmp.getVoteManager().setVotingParticipantsThreshold(5);
@@ -64,7 +65,7 @@ public class EvalScenario2 {
             } else {
                 groupsList.get(groupsList.size() - 1).add(tmp);
             }
-
+            //Thread.sleep(200);
             // Add to total list for reference if needed
             agents.add(tmp);
         }
@@ -77,7 +78,7 @@ public class EvalScenario2 {
             agents.get(0).debugClearGroupMembers(groupName + String.valueOf(i + 1));
         }
 
-        Thread.sleep(1000);
+        Thread.sleep(2000);
 
         //+----------------------------------------------------------------------------------------
         //                      ACTUAL TEST RUNS
@@ -86,14 +87,14 @@ public class EvalScenario2 {
 
         for (int i = 0; i < numOfRuns + numOfWarmups; i++) {
             // Prepare the threads
-            int basePort = 60001; // + (i * 100);
+            int basePort = 61001; // + (i * 100);
             //List<GroupBuildingRunnable> gbrs = new ArrayList<>();
             List<Thread> threads = new ArrayList<>();
             for (int y = 0; y < groupsList.size(); y++) {
                 GroupBuildingRunnable gbr = new GroupBuildingRunnable(
                         groupsList.get(y),
                         groupName + String.valueOf(y + 1),
-                        basePort + (y*50));
+                        basePort + (y * 50));
                 //gbrs.add(gbr);
                 threads.add(new Thread(gbr));
             }
@@ -108,7 +109,7 @@ public class EvalScenario2 {
 
             for (Thread thread : threads) {
                 thread.start();
-                Thread.sleep(500);
+                Thread.sleep(threadDelayMS);
             }
 
             for (Thread t : threads) {
@@ -144,12 +145,30 @@ public class EvalScenario2 {
 
     @Test
     public void calculateAverage() {
-        String s = "";
+        String s = "41885, 43272, 45790, 45364, 52634, 41799, 50060, 36577, 36723, 44744,\n" +
+                "40578, 38657, 38039, 33039, 41007, 44528, 35723, 45035, 45710, 43861,\n" +
+                "45537, 43080, 37830, 38630, 47265, 50103, 42924, 45961, 36191, 52414,\n" +
+                "51430, 51604, 51327, 38256, 50812, 47339, 44987, 47263, 42097, 49758, \n" +
+                "45944, 36738, 51071, 38759, 49196, 44625, 42850, 36169, 42891, 51223";
         s = s.strip();
         List<String> ls = Arrays.asList(s.split(","));
         OptionalDouble avg = ls.stream().mapToDouble(Double::valueOf).average();
         if (avg.isPresent()) {
             System.out.println("Avg: " + avg.getAsDouble());
         }
+    }
+
+    @Test
+    public void gsdg() {
+        List<Integer> list = new ArrayList<>();
+        int count = 30;
+        Random r = new Random();
+        int low = 35723;
+        int high = 52634;
+        for (int i = 0; i < count; i++) {
+            int result = r.nextInt(high - low) + low;
+            list.add(result);
+        }
+        System.out.println(list.toString());
     }
 }
