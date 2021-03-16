@@ -1,5 +1,6 @@
 package joinnetwork;
 
+import blockchain.GlobalConfig;
 import blockchain.SawtoothUtils;
 import client.JoinNetworkExtension;
 import joingroup.JoinRequest;
@@ -32,7 +33,6 @@ public class JNMemberThread implements Runnable {
 
     private final JoinNetworkExtension joiningManager;
 
-    private final boolean doPrint = true;
     private static final int RECEIVE_TIMEOUT_MS = 10000;
 
     public JNMemberThread(String myID, JoinRequest joinRequest, Signer mySigner,
@@ -89,7 +89,7 @@ public class JNMemberThread implements Runnable {
     }
 
     void print(String message) {
-        if (doPrint)
+        if (GlobalConfig.PRINT_JOIN_NETWORK_MEMBER)
             System.out.println("[" + Thread.currentThread().getId() + "] [JoinNetworkMember][" + myID + "] " + message);
     }
 }

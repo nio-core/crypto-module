@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 
 import javax.annotation.Nullable;
 
-public class KeyExchangeReceipt implements ISignableMessage {
+public class Receipt implements ISignableMessage {
 
     private final String memberPublicKey;
     private final String applicantPublicKey;
@@ -13,8 +13,8 @@ public class KeyExchangeReceipt implements ISignableMessage {
     private final long timestamp;
     private String signature;
 
-    public KeyExchangeReceipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType,
-                              @Nullable String group, long timestamp) {
+    public Receipt(String memberPublicKey, String applicantPublicKey, ReceiptType receiptType,
+                   @Nullable String group, long timestamp) {
         this.memberPublicKey = memberPublicKey;
         this.applicantPublicKey = applicantPublicKey;
         this.receiptType = receiptType;

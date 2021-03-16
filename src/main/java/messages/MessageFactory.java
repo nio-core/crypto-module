@@ -3,7 +3,7 @@ package messages;
 import diffiehellman.DHMessage;
 import joingroup.JoinRequest;
 import keyexchange.ISignableMessage;
-import keyexchange.KeyExchangeReceipt;
+import keyexchange.Receipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.signing.Signer;
 import voting.JoinRequestType;
@@ -45,8 +45,8 @@ public class MessageFactory {
         return signIfPossible(new JoinRequest(applicantPublicKey, contactPublicKey, type, groupName, votingArgs, address, port));
     }
 
-    public KeyExchangeReceipt keyExchangeReceipt(String applicantPublicKey, ReceiptType receiptType, String group) {
-        return signIfPossible(new KeyExchangeReceipt(signer.getPublicKey().hex(), applicantPublicKey, receiptType, group, System.currentTimeMillis()));
+    public Receipt keyExchangeReceipt(String applicantPublicKey, ReceiptType receiptType, String group) {
+        return signIfPossible(new Receipt(signer.getPublicKey().hex(), applicantPublicKey, receiptType, group, System.currentTimeMillis()));
     }
 
     private <T> T signIfPossible(T message) {

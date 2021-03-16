@@ -1,5 +1,6 @@
 package diffiehellman;
 
+import blockchain.GlobalConfig;
 import blockchain.SawtoothUtils;
 import sawtooth.sdk.signing.Signer;
 
@@ -34,7 +35,6 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
     private final int port;
     private PrintWriter out;
     private BufferedReader in;
-    boolean doPrint = false;
 
     public DHKeyExchange(String myID, Signer mySigner, String theirPublicKey, String address, int port, boolean isServer) {
         this.myID = myID;
@@ -52,7 +52,7 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
     public EncryptedStream call() throws Exception {
         // Setup sockets and streams
         Socket socket;
-        System.err.println("[DH]" + myID + ": port=" + port);
+        //System.err.println("[DH] " + myID + ": port=" + port);
         if (isServer) {
             print("Setting up server");
             ServerSocket serverSocket = new ServerSocket(port);
@@ -165,7 +165,7 @@ public class DHKeyExchange implements Callable<EncryptedStream> {
     }
 
     private void print(String message) {
-        if (doPrint)
+        if (GlobalConfig.PRINT_DIFFIE_HELLMAN)
             System.out.println("[" + Thread.currentThread().getId() + "]" + "[DHKE-" + myID + "] " + message);
     }
 }

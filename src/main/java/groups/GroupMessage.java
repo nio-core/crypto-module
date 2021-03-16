@@ -21,7 +21,7 @@ public class GroupMessage {
     public GroupMessage(String group, String payload, boolean doWriteToChain, boolean doBroadcast) {
         this.doWriteToChain = doWriteToChain;
         // If it should be written to the chain, generate an address for it, otherwise its null
-        this.addressOnChain = doWriteToChain ? SawtoothUtils.namespaceHashAddress(BlockchainHelper.CSVSTRINGS_NAMESPACE, (group + payload)) : null;
+        this.addressOnChain = doWriteToChain ? SawtoothUtils.namespaceHashAddress(BlockchainHelper.GROUP_MESSAGE_NAMESPACE, (group + payload)) : null;
         this.doBroadcast = doBroadcast;
         this.group = group;
         this.payload = payload;

@@ -29,11 +29,10 @@ public class EventHandler implements AutoCloseable {
     private final BlockingQueue<Message> subscriptionQueue = new ArrayBlockingQueue<Message>(100);
 
     private int receiveTimeoutMS = 700;
-    private boolean doPrint = false;
 
     public EventHandler(HyperZMQ callback, String validatorURL) {
         this.hyperzmq = callback;
-        this.validatorURL = validatorURL == null ? ValidatorAddress.VALIDATOR_URL_DEFAULT : validatorURL;
+        this.validatorURL = validatorURL == null ? GlobalConfig.VALIDATOR_URL_DEFAULT : validatorURL;
         startListenerLoop();
         startEventDistributorLoop();
     }
@@ -78,7 +77,7 @@ public class EventHandler implements AutoCloseable {
                             // In case of JoinRequest, the attribute value of the event is just the namespace instead of a full address
                             // Because JoinRequests are not written to the blockchain
                             Event.Attribute attr = e.getAttributes(0);
-                            if (BlockchainHelper.CSVSTRINGS_NAMESPACE.equals(attr.getValue())) {
+                            if (BlockchainHelper.GROUP_MESSAGE_NAMESPACE.equals(attr.getValue())) {
                                 JoinRequest request = SawtoothUtils.deserializeMessage(e.getData().toStringUtf8(), JoinRequest.class);
                                 if (request != null) {
                                     //print("Received JoinGroupRequest: " + request.toString());
@@ -192,7 +191,7 @@ public class EventHandler implements AutoCloseable {
         EventFilter eventFilter = EventFilter.newBuilder()
                 .setFilterType(EventFilter.FilterType.REGEX_ANY)
                 .setKey("address")
-                .setMatchString(BlockchainHelper.CSVSTRINGS_NAMESPACE + "*")
+                .setMatchString(BlockchainHelper.GROUP_MESSAGE_NAMESPACE + "*")
                 .build();
         queueNewSubscription(groupName, eventFilter);
     }
@@ -230,7 +229,7 @@ public class EventHandler implements AutoCloseable {
     }
 
     private void print(String msg) {
-        if (doPrint)
+        if (GlobalConfig.PRINT_EVENT_HANDLER)
             System.out.println("[" + Thread.currentThread().getId() + "]" + " [EventHandler][" + hyperzmq.getClientID() + "]  " + msg);
     }
 

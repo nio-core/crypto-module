@@ -1,10 +1,11 @@
 package txprocessor;
 
+import blockchain.GlobalConfig;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
-import keyexchange.KeyExchangeReceipt;
+import keyexchange.Receipt;
 import keyexchange.ReceiptType;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -20,18 +21,18 @@ import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class KeyExReceiptHandler implements TransactionHandler {
+public class ReceiptHandler implements TransactionHandler {
 
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-    private static final String TRANSACTION_FAMILY_NAME = "KeyExchangeReceipt";
+    private static final String TRANSACTION_FAMILY_NAME = "Receipt";
     private static final String TRANSACTION_FAMILY_VERSION = "0.1";
     private final String namespace = "ac0cab";
     private boolean doPrint = false;
 
-    public KeyExReceiptHandler() {
+    public ReceiptHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
-        print("Starting KeyExchangeReceiptTP with namespace '" + namespace + "'");
+        print("Starting ReceiptTP with namespace '" + namespace + "'");
     }
 
     public String transactionFamilyName() {
@@ -67,9 +68,9 @@ public class KeyExReceiptHandler implements TransactionHandler {
         }
         // END DEBUG FUNCTION //
 
-        KeyExchangeReceipt receipt;
+        Receipt receipt;
         try {
-            receipt = new Gson().fromJson(payloadStr, KeyExchangeReceipt.class);
+            receipt = new Gson().fromJson(payloadStr, Receipt.class);
         } catch (JsonSyntaxException e) {
             print("Malformed payload: " + payloadStr);
             throw new InvalidTransactionException("Malformed payload: " + payloadStr);
@@ -179,8 +180,8 @@ public class KeyExReceiptHandler implements TransactionHandler {
     }
 
     private void print(String message) {
-        if (doPrint)
-            System.out.println("[KeyExchangeReceiptTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
+        if (GlobalConfig.PRINT_RECEIPT_TRANSACTION_PROCESSOR)
+            System.out.println("[ReceiptTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }
 

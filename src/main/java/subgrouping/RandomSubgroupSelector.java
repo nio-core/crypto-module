@@ -9,7 +9,14 @@ public class RandomSubgroupSelector implements ISubgroupSelector {
     public List<String> selectSubgroup(List<String> input, int subgroupSize) {
 
         Random r = new Random();
-        List<Integer> ints = new ArrayList<>();
+        List<String> ret = new ArrayList<>();
+        while (subgroupSize > 0) {
+            ret.add(input.remove(r.nextInt(input.size() - 1)));
+            subgroupSize--;
+        }
+        return ret;
+
+        /*List<Integer> ints = new ArrayList<>();
         while (ints.size() < subgroupSize) {
             int number = r.nextInt(input.size() - 1);
             if (!ints.contains(number)) {
@@ -22,5 +29,6 @@ public class RandomSubgroupSelector implements ISubgroupSelector {
             ret.add(input.get(i));
         }
         return ret;
+        */
     }
 }

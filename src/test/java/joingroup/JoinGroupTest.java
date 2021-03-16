@@ -1,7 +1,7 @@
 package joingroup;
 
 import client.HyperZMQ;
-import keyexchange.KeyExchangeReceipt;
+import keyexchange.Receipt;
 import keyexchange.ReceiptType;
 import org.junit.Test;
 import voting.SawtoothVotingProcess;
@@ -50,7 +50,7 @@ public class JoinGroupTest implements IJoinGroupStatusCallback {
         member1.createGroup(groupName);
         groupKey = member1.getKeyForGroup(groupName);
 
-        KeyExchangeReceipt receipt = new KeyExchangeReceipt(member1.getSawtoothPublicKey(),
+        Receipt receipt = new Receipt(member1.getSawtoothPublicKey(),
                 PUBLIC_MEMBER_2, // shortcut
                 ReceiptType.JOIN_GROUP,
                 groupName,

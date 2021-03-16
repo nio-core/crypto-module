@@ -1,5 +1,6 @@
 package client;
 
+import blockchain.GlobalConfig;
 import diffiehellman.DHKeyExchange;
 import diffiehellman.EncryptedStream;
 import groups.Envelope;
@@ -34,7 +35,7 @@ public class VoteManager {
 
     // Variables for selecting a subgroup of participants when voting
     private ISubgroupSelector subgroupSelector = null;
-    private int votingParticipantsThreshold = 100; // FIXME
+    private int votingParticipantsThreshold = GlobalConfig.DEFAULT_VOTING_PARTICIPANTS_THRESHOLD;
 
     // The VotingProcess implements the behavior for when this client is the vote leader
     private IVotingProcess votingProcessGroup = null;
@@ -56,9 +57,6 @@ public class VoteManager {
 
     private IVoteStatusCallback statusCallback = null;
 
-    private int votingProcessTimeoutMS = 5000;
-    private final boolean doPrint = false;
-
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
         startVoteRequiredHandler();
@@ -76,7 +74,7 @@ public class VoteManager {
             VotingMatter matter = null;
             try {
                 // Use a timeout here, because the thread could have been shut down meanwhile
-                matter = votingMatters.poll(1000, TimeUnit.MILLISECONDS);
+                matter = votingMatters.poll(GlobalConfig.VOTE_REQUIRED_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -139,7 +137,7 @@ public class VoteManager {
             JoinRequest joinRequest = null;
             try {
                 // Use a timeout here, because the thread could have been shut down meanwhile
-                joinRequest = this.joinRequests.poll(1000, TimeUnit.MILLISECONDS);
+                joinRequest = this.joinRequests.poll(GlobalConfig.JOIN_REQUEST_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -170,16 +168,10 @@ public class VoteManager {
                             joinRequest.getGroupName() : HyperZMQ.JOIN_NETWORK_VOTE_GROUP;
                     List<String> groupMembers = hyperZMQ.getGroupMembersFromReceipts(groupToGet);
 
-                    /*if (joinRequest.getType().equals(JoinRequestType.GROUP)) {
-                        groupMembers = hyperZMQ.getGroupMembersFromReceipts(joinRequest.getGroupName());
-                    } else {
-                        groupMembers = hyperZMQ.();
-                    } */
-
                     // Let self vote
                     if (groupMembers.size() > votingParticipantsThreshold) {
                         if (subgroupSelector == null) {
-                            print("No SubGroupSelector available but is required. Voting will be aborted!!");
+                            printErr("No SubGroupSelector available but is required. Voting will be aborted!!");
                             continue;
                         }
                         groupMembers = subgroupSelector.selectSubgroup(groupMembers, votingParticipantsThreshold);
@@ -187,7 +179,7 @@ public class VoteManager {
 
                     VotingMatter votingMatter = new VotingMatter(hyperZMQ.getSawtoothPublicKey(), groupMembers, joinRequest);
                     // TODO enforce timeout here - if reached reject the request or take best shot from process?
-                    VotingResult result = process.vote(votingMatter, votingProcessTimeoutMS);
+                    VotingResult result = process.vote(votingMatter, GlobalConfig.VOTING_PROCESS_TIMEOUT_MS);
                     //print("VoteProcess finished with result: " + result.toString());
                     boolean isApproved = voteEvaluator.evaluateVotes(result);
                     //print("Votes were evaluated with result: " + isApproved);
@@ -198,7 +190,7 @@ public class VoteManager {
                         e.printStackTrace();
                     }
                 } else {
-                    print("No Voting process found for type " + joinRequest.getType());
+                    printErr("No Voting process found for type " + joinRequest.getType());
                 }
             }
         }
@@ -210,7 +202,7 @@ public class VoteManager {
         while (runVotingFinisher.get()) {
             ImmutablePair<VotingResult, Boolean> resultPair = null;
             try {
-                resultPair = finishedVotes.poll(1000, TimeUnit.MILLISECONDS);
+                resultPair = finishedVotes.poll(GlobalConfig.VOTING_FINISHER_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -252,13 +244,13 @@ public class VoteManager {
                         }
                     } catch (ConnectException e) {
                         // TODO applicant has not set up a server
-                        print("Cannot notify the applicant because no server is listening for a connection on: "
+                        printErr("Cannot notify the applicant because no server is listening for a connection on: "
                                 + joinRequest.getAddress() + ":" + joinRequest.getPort());
                         //e.printStackTrace();
                     }
                 } catch (Exception e) {
                     // TODO
-                    print("Diffie-Hellman key exchange failed!");
+                    printErr("Diffie-Hellman key exchange failed!");
                 }
             }
         }
@@ -266,7 +258,7 @@ public class VoteManager {
     }
 
     private void print(String message) {
-        if (doPrint) {
+        if (GlobalConfig.PRINT_VOTE_MANAGER) {
             System.out.println("[" + Thread.currentThread().getId() + "] [VoteManager][" + hyperZMQ.getClientID() + "]  " + message);
         }
     }

@@ -20,14 +20,13 @@ public class EvalScenario2 {
         //+----------------------------------------------------------------------------------------
         //                      PARAMETERS
         //-----------------------------------------------------------------------------------------
-        int numOfGroups = 10;
-        int numOfAgentsInGroup = 5;
+        int numOfGroups = 1;
+        int numOfAgentsInGroup = 100;
         int numOfAgents = numOfAgentsInGroup * numOfGroups;
         String groupName = "testgroup";
         int numOfRuns = 1;
         int numOfWarmups = 0;
-        int threadDelayMS = 1500;
-
+        int threadDelayMS = 50;
 
         CombinedTP.main(null);
 
@@ -46,11 +45,11 @@ public class EvalScenario2 {
             tmp.isVolatile = true; // Don't save any data
             tmp.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(tmp.getClientID()));
 
-            tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
-            tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
+            //tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
+            //tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
 
-            //tmp.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(tmp, 60001 + i));
-            //tmp.getVoteManager().setVoteSender(new ZMQVoteSender());
+            tmp.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(tmp, 60001 + i));
+            tmp.getVoteManager().setVoteSender(new ZMQVoteSender());
 
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(0));
 

@@ -7,6 +7,8 @@ import sawtooth.sdk.signing.*;
 
 import java.nio.charset.StandardCharsets;
 
+import static blockchain.GlobalConfig.PRINT_SAWTOOTH_UTILS;
+
 /**
  * Collect all Sawtooth related helper methods here,
  * instead of confusing the sawtooth or bitoinj packages
@@ -15,7 +17,6 @@ public class SawtoothUtils {
 
     //private static final String HEX_CHARACTERS = "0123456789ABCDEF";
     private static final String HEX_CHARACTERS = "0123456789abcdef";
-    private static boolean doPrint = false;
 
     public static String hash(String toHash) {
         return Utils.hash512(toHash.getBytes(StandardCharsets.UTF_8));
@@ -99,7 +100,7 @@ public class SawtoothUtils {
     }
 
     private static void print(String message) {
-        if (doPrint)
+        if (PRINT_SAWTOOTH_UTILS)
             System.out.println("[" + Thread.currentThread().getId() + "]" + "[SawtoothUtils] " + message);
     }
 

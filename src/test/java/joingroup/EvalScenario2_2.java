@@ -14,21 +14,26 @@ public class EvalScenario2_2 {
 
     /**
      * The goal of this test is to measure the time it takes to create X groups with Y participants each and then disband the groups
+     * This Test creates the HyperZMQ clients iteratively as opposed to the other which creates all clients upfront
      */
     @Test
     public void test() throws InterruptedException {
         //+----------------------------------------------------------------------------------------
         //                      PARAMETERS
         //-----------------------------------------------------------------------------------------
-        int numOfGroups = 10;
-        int numOfAgentsInGroup = 2;
+        int numOfGroups = 5;
+        int numOfAgentsInGroup = 8;
         int numOfAgents = numOfAgentsInGroup * numOfGroups;
-        String groupName = "testgroup";
+
         int numOfRuns = 1;
         int numOfWarmups = 0;
-        int threadDelayMS = 500;
+        int threadDelayMS = 1000;
+
+        String groupName = "testgroup";
 
         CombinedTP.main(null);
+        //CombinedTP.main(new String[]{"tcp://192.168.178.55:4004"});
+        //CombinedTP.main(new String[]{"tcp://192.168.178.61:4004"});
 
         Thread.sleep(1500);
 
@@ -37,7 +42,6 @@ public class EvalScenario2_2 {
         //-----------------------------------------------------------------------------------------
         HyperZMQ h = new HyperZMQ.Builder("sdlfsdf", "sdfsd").build();
         h.isVolatile = true;
-
 
         // Clear the receipts
         for (int i = 0; i < numOfGroups; i++) {
@@ -53,7 +57,7 @@ public class EvalScenario2_2 {
 
         for (int i = 0; i < numOfRuns + numOfWarmups; i++) {
             // Prepare the threads
-            int dhbasePort = 61001; // + (i * 100);
+            int dhbasePort = 60001; // + (i * 100);
             int zmqbasePort = 5558;
             //List<GroupBuildingRunnable> gbrs = new ArrayList<>();
             List<Thread> threads = new ArrayList<>();

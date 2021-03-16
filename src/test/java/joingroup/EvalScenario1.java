@@ -1,11 +1,12 @@
 package joingroup;
 
 import client.HyperZMQ;
-import keyexchange.KeyExchangeReceipt;
+import keyexchange.Receipt;
 import keyexchange.ReceiptType;
 import org.junit.Assert;
 import org.junit.Test;
 import subgrouping.RandomSubgroupSelector;
+import voting.SawtoothVoteSender;
 import voting.SawtoothVotingProcess;
 import voting.SimpleMajorityEvaluator;
 import voting.YesVoteStrategy;
@@ -40,16 +41,19 @@ public class EvalScenario1 {
     public void increasingGroupSizeTimeMeasure() throws InterruptedException {
         AtomicBoolean finished = new AtomicBoolean(false);
         String group = "superGroup";
-        int numOfClients = 300; // TODO try 999999999 clients
+        int numOfClients = 100;
         List<Long> times = new ArrayList<>();
 
         HyperZMQ originalClient = new HyperZMQ.Builder("originalClient", "password")
                 .setIdentity(PRIVATE_1)
                 .build();
         originalClient.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(300));
-        originalClient.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(originalClient));
         originalClient.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator("originalClient"));
+
+
+        originalClient.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(originalClient));
+        originalClient.getVoteManager().setVoteSender(new SawtoothVoteSender());
 
         // TODO test with selection before voting
         originalClient.getVoteManager().setVotingParticipantsThreshold(10);
@@ -67,7 +71,9 @@ public class EvalScenario1 {
             HyperZMQ tmp = new HyperZMQ.Builder("client" + String.valueOf(i), "password")
                     .createNewIdentity(true)
                     .build();
-            tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
+            tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(10));
+            tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
+
             Thread.sleep(500);
             CountDownLatch latch = new CountDownLatch(1);
             long startTime = System.currentTimeMillis();
@@ -82,6 +88,7 @@ public class EvalScenario1 {
 
             long endTime = System.currentTimeMillis() - startTime;
             times.add(endTime);
+            System.out.println("Cur: " + i + ", Times: " + times.toString());
         }
 
         System.out.println("[TEST] Up to " + numOfClients + " times:" + times.toString());
@@ -92,8 +99,8 @@ public class EvalScenario1 {
         /// Transaction Processors should be running
         /////// PARAMETERS ///////////
         int groupSize = 100;
-        int numberOfRuns = 50;
-        int numberOfWarmups = 5;
+        int numberOfRuns = 1;
+        int numberOfWarmups = 0;
         //////////////////////////////
 
         String groupName = "testgroup";
@@ -107,7 +114,7 @@ public class EvalScenario1 {
         originalClient.getVoteManager().setVoteEvaluator(
                 new SimpleMajorityEvaluator("originalClient"));
 
-        originalClient.getVoteManager().setVotingParticipantsThreshold(500);
+        originalClient.getVoteManager().setVotingParticipantsThreshold(10);
         originalClient.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
 
         originalClient.debugClearGroupMembers(groupName);
@@ -129,7 +136,7 @@ public class EvalScenario1 {
 
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(50));
             tmp.addGroup(groupName, groupKey);
-            KeyExchangeReceipt receipt = originalClient.messageFactory.keyExchangeReceipt(tmp.getSawtoothPublicKey(), ReceiptType.JOIN_GROUP, groupName);
+            Receipt receipt = originalClient.messageFactory.keyExchangeReceipt(tmp.getSawtoothPublicKey(), ReceiptType.JOIN_GROUP, groupName);
 
             originalClient.sendKeyExchangeReceipt(receipt);
             Thread.sleep(500); // Time to process the receipt
@@ -158,7 +165,7 @@ public class EvalScenario1 {
                 times.add(elapsedTime);
             }
 
-            System.out.println("[TEST] Time: " + elapsedTime + "ms");
+            System.out.println("Times: " + times.toString());
 
             // Remove the client from the group to keep it at X members
             tmp.removeGroup(groupName);

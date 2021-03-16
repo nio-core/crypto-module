@@ -3,7 +3,7 @@ package blockchain;
 import client.HyperZMQ;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import keyexchange.KeyExchangeReceipt;
+import keyexchange.Receipt;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.zeromq.ZContext;
@@ -16,7 +16,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
-import java.sql.Time;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -27,7 +26,7 @@ import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class BlockchainHelper {
+public class BlockchainHelper implements Closeable {
 
     private String baseRestAPIUrl;
     private final HyperZMQ hyperZMQ;
@@ -35,11 +34,10 @@ public class BlockchainHelper {
     private final ZContext zContext = new ZContext();
     private final ZMQ.Socket submitSocket;
 
-    public static final String KEY_EXCHANGE_RECEIPT_FAMILY = "KeyExchangeReceipt";
-    public static final String KEY_EXCHANGE_RECEIPT_NAMESPACE = "ac0cab";
-    public static final String CSVSTRINGS_FAMILY = "csvstrings";
-    public static final String CSVSTRINGS_NAMESPACE = "2f9d35";
-    private final boolean doPrint = false;
+    public static final String RECEIPT_FAMILY = "Receipt";
+    public static final String RECEIPT_NAMESPACE = "ac0cab";
+    public static final String GROUP_MESSAGE_FAMILY = "GroupMessage";
+    public static final String GROUP_MESSAGE_NAMESPACE = "2f9d35";
 
     private final BlockingQueue<BatchList> batchListQueue = new ArrayBlockingQueue<BatchList>(100);
     private final AtomicBoolean runSender = new AtomicBoolean(true);
@@ -50,7 +48,7 @@ public class BlockchainHelper {
     public BlockchainHelper(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
         // TODO unused vvv: refactor or remove
-        baseRestAPIUrl = ValidatorAddress.REST_URL_DEFAULT;
+        baseRestAPIUrl = GlobalConfig.REST_URL_DEFAULT;
 
         submitSocket = zContext.createSocket(ZMQ.DEALER);
         submitSocket.connect(hyperZMQ.getValidatorAddress());
@@ -81,23 +79,23 @@ public class BlockchainHelper {
     public Transaction csvStringsTransaction(byte[] payload, @Nullable String outputAddress) {
         Objects.requireNonNull(payload);
         return buildTransaction(
-                BlockchainHelper.CSVSTRINGS_FAMILY,
+                BlockchainHelper.GROUP_MESSAGE_FAMILY,
                 "0.1",
                 payload,
                 outputAddress);
     }
 
-    public Transaction keyExchangeReceiptTransaction(KeyExchangeReceipt keyExchangeReceipt) {
-        Objects.requireNonNull(keyExchangeReceipt);
-        return buildTransaction(BlockchainHelper.KEY_EXCHANGE_RECEIPT_FAMILY,
+    public Transaction receiptTransaction(Receipt receipt) {
+        Objects.requireNonNull(receipt);
+        return buildTransaction(BlockchainHelper.RECEIPT_FAMILY,
                 "0.1",
-                keyExchangeReceipt.toString().getBytes(UTF_8),
+                receipt.toString().getBytes(UTF_8),
                 null);
     }
 
-    public Transaction keyExchangeReceiptTransaction(String payload) {
+    public Transaction receiptTransaction(String payload) {
         Objects.requireNonNull(payload);
-        return buildTransaction(BlockchainHelper.KEY_EXCHANGE_RECEIPT_FAMILY,
+        return buildTransaction(BlockchainHelper.RECEIPT_FAMILY,
                 "0.1",
                 payload.toString().getBytes(UTF_8),
                 null);
@@ -115,9 +113,9 @@ public class BlockchainHelper {
 
         // Set in- and outputs to the transaction family namespace to limit their read and write to their own namespaces
         // TODO do a switch here do support more tx families easier
-        String input = KEY_EXCHANGE_RECEIPT_NAMESPACE;
-        if (transactionFamily.equals(CSVSTRINGS_FAMILY)) {
-            input = CSVSTRINGS_NAMESPACE;
+        String input = RECEIPT_NAMESPACE;
+        if (transactionFamily.equals(GROUP_MESSAGE_FAMILY)) {
+            input = GROUP_MESSAGE_NAMESPACE;
         }
         String outputs = outputAddr == null ? input : outputAddr;
 
@@ -198,7 +196,7 @@ public class BlockchainHelper {
             if (success) {
                 print("Batch submit of " + batchList.toString() + "successful");
             } else {
-                printErr("Batch submit of " + batchList.toString() + "failed!");
+                printErr("Batch submit" /*of " + batchList.toString()*/ + "failed!");
             }
             return success;
         } catch (InvalidProtocolBufferException e) {
@@ -327,7 +325,7 @@ public class BlockchainHelper {
     }
 
     private void print(String message) {
-        if (doPrint)
+        if (GlobalConfig.PRINT_BLOCKCHAIN_HELPER)
             System.out.println("[" + Thread.currentThread().getId() + "] [BlockchainHelper][" + hyperZMQ.getClientID() + "]  " + message);
     }
 
@@ -340,7 +338,7 @@ public class BlockchainHelper {
         while (this.runSender.get()) {
             BatchList list = null;
             try {
-                list = batchListQueue.poll(1000, TimeUnit.MILLISECONDS);
+                list = batchListQueue.poll(GlobalConfig.BATCH_SENDER_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -352,11 +350,23 @@ public class BlockchainHelper {
         print("Stopping BatchSender...");
     }
 
-    void stopSender() {
+    public void stopSender() {
         this.runSender.set(false);
     }
 
-    void runSender() {
+    @Override
+    public void close() {
+        this.submitSocket.disconnect(hyperZMQ.getValidatorAddress());
+        this.submitSocket.close();
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        this.zContext.close();
+    }
+
+    public void runSender() {
         this.runSender.set(true);
         senderExecutor.submit(new Thread(this::batchSenderLoop));
     }

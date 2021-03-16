@@ -1,5 +1,6 @@
 package joinnetwork;
 
+import blockchain.GlobalConfig;
 import blockchain.SawtoothUtils;
 import client.JoinNetworkExtension;
 import diffiehellman.DHKeyExchange;
@@ -172,7 +173,7 @@ public class JNApplicantThread implements Runnable {
     }
 
     void print(String message) {
-        if (doPrint)
+        if (GlobalConfig.PRINT_JOIN_NETWORK_APPLICANT)
             System.out.println("[" + Thread.currentThread().getId() + "] [JoinNetworkApplicant][" + myID + "] " + message);
     }
 }

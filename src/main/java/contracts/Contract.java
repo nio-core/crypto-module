@@ -30,10 +30,10 @@ public class Contract {
 
         // Generate output addresses so clients can track this contract
         String idHash = Utils.hash512(contractID.getBytes());
-        this.outputAddr = BlockchainHelper.CSVSTRINGS_NAMESPACE + idHash.substring(idHash.length() - 64);
+        this.outputAddr = BlockchainHelper.GROUP_MESSAGE_NAMESPACE + idHash.substring(idHash.length() - 64);
 
         String otherHash = Utils.hash512(UUID.randomUUID().toString().getBytes());
-        this.resultOutputAddr =  BlockchainHelper.CSVSTRINGS_NAMESPACE + otherHash.substring(otherHash.length() - 64);
+        this.resultOutputAddr =  BlockchainHelper.GROUP_MESSAGE_NAMESPACE + otherHash.substring(otherHash.length() - 64);
     }
 
     public String getIssuer() {

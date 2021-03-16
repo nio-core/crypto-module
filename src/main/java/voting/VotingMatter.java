@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import joingroup.JoinRequest;
 
 import java.util.List;
+import util.Utilities;
 
 public class VotingMatter {
 
@@ -16,12 +17,14 @@ public class VotingMatter {
     private final List<String> desiredVoters;
 
     private final JoinRequest joinRequest;
+    private final String nonce;
 
     public VotingMatter(String voteDirectorPublicKey, List<String> desiredVoters, JoinRequest joinRequest) {
         this.voteDirectorPublicKey = voteDirectorPublicKey;
         this.desiredVoters = desiredVoters;
         this.joinRequest = joinRequest;
         this.hash = SawtoothUtils.hash(this.voteDirectorPublicKey + joinRequest.toString() + this.getDesiredVoters().toString());
+        this.nonce = Utilities.generateNonce(32);
     }
 
     public String getHash() {

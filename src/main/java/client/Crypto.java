@@ -153,12 +153,14 @@ public class Crypto {
         if (groupKeys.containsKey(groupName)) {
             return new String(Base64.getEncoder().encode(groupKeys.get(groupName).getEncoded()), UTF_8);
         }
+        System.err.println("Group " + groupName + " not found!");
         return null;
     }
 
     void createGroup(String name) throws IllegalArgumentException {
         if (groupKeys.containsKey(name)) {
-            throw new IllegalArgumentException("Name '" + name + "' already in use");
+            System.err.println("Name '" + name + "' already in use");
+            return;
         }
         groupKeys.put(name, generateSecretKey());
         save();
@@ -169,7 +171,8 @@ public class Crypto {
     void addGroup(String groupName, String key) {
         byte[] keyBytes = Base64.getDecoder().decode(key);
         if (keyBytes.length != KEY_LENGTH) {
-            throw new IllegalArgumentException("Key size is invalid! Expected 32, got " + keyBytes.length);
+            System.err.println("Key size is invalid! Expected 32, got " + keyBytes.length);
+            return;
         }
         groupKeys.put(groupName, new SecretKeySpec(Base64.getDecoder().decode(key), "AES"));
         save();

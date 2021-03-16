@@ -1,5 +1,6 @@
 package txprocessor;
 
+import blockchain.GlobalConfig;
 import blockchain.SawtoothUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -17,21 +18,19 @@ import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class CSVStringsHandler implements TransactionHandler {
+public class GroupMessageHandler implements TransactionHandler {
     private final String namespace = "2f9d35";
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
-    private boolean doPrint = false;
-
-    public CSVStringsHandler() {
+    public GroupMessageHandler() {
         // Convention
         //namespace = SawtoothUtils.hash(transactionFamilyName()).substring(0, 6);
-        print("Starting CSVStringsTP with namespace '" + namespace + "'");
+        print("Starting GroupMessageTP with namespace '" + namespace + "'");
     }
 
     @Override
     public String transactionFamilyName() {
-        return "csvstrings";
+        return "GroupMessage";
     }
 
     @Override
@@ -136,7 +135,7 @@ public class CSVStringsHandler implements TransactionHandler {
     }
 
     void print(String message) {
-        if (doPrint)
-            System.out.println("[CSVStringTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
+        if (GlobalConfig.PRINT_GROUP_TRANSACTION_PROCESSOR)
+            System.out.println("[GroupMessageTP][" + sdf.format(Calendar.getInstance().getTime()) + "]  " + message);
     }
 }

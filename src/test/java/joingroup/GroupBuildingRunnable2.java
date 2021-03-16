@@ -3,11 +3,10 @@ package joingroup;
 import client.HyperZMQ;
 import org.junit.Assert;
 import subgrouping.RandomSubgroupSelector;
-import voting.SimpleMajorityEvaluator;
-import voting.YesVoteStrategy;
-import voting.ZMQVoteSender;
-import voting.ZMQVotingProcess;
+import voting.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertTrue;
@@ -25,6 +24,8 @@ public class GroupBuildingRunnable2 implements Runnable {
     public final int dhPort, zmqPort;
     final int agentCount;
 
+    boolean useZMQ = false;
+
     public GroupBuildingRunnable2(int agentCount, String groupName, int port, int zmqPort) {
         this.agentCount = agentCount;
         this.groupName = groupName;
@@ -37,16 +38,21 @@ public class GroupBuildingRunnable2 implements Runnable {
         //System.out.println("Running GroupBuildingThread for group'" + groupName + "' with agents: "
         //        + agents.stream().map(HyperZMQ::getClientID).reduce("", (s, s2) -> s2 + ", " + s));
         System.err.println("Running GBR2 for group " + groupName + " with " + agentCount + " agents");
+        List<HyperZMQ> list = new ArrayList<>();
         if (agentCount == 0) return;
         HyperZMQ c1 = new HyperZMQ.Builder("client1-" + groupName, "sdfsd").build();
         c1.isVolatile = true;
         c1.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(c1.getClientID()));
-        System.err.println("dsvsdfsdfsdfds");
-        //tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
-        //tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
+        list.add(c1);
 
-        c1.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(c1, zmqPort));
-        c1.getVoteManager().setVoteSender(new ZMQVoteSender());
+        if (useZMQ) {
+            c1.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(c1, zmqPort));
+            c1.getVoteManager().setVoteSender(new ZMQVoteSender());
+        } else {
+            c1.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(c1));
+            c1.getVoteManager().setVoteSender(new SawtoothVoteSender());
+        }
+
 
         c1.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(0));
 
@@ -77,16 +83,18 @@ public class GroupBuildingRunnable2 implements Runnable {
 
             //tmp.getVoteManager().setVoteEvaluator(new SimpleMajorityEvaluator(tmp.getClientID()));
 
-            //tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
-            //tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
-
-            //tmp.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(tmp, 60001 + i));
-            tmp.getVoteManager().setVoteSender(new ZMQVoteSender());
+            if (useZMQ) {
+                tmp.getVoteManager().setVotingProcessGroup(new ZMQVotingProcess(tmp, zmqPort + i));
+                tmp.getVoteManager().setVoteSender(new ZMQVoteSender());
+            } else {
+                tmp.getVoteManager().setVotingProcessGroup(new SawtoothVotingProcess(tmp));
+                tmp.getVoteManager().setVoteSender(new SawtoothVoteSender());
+            }
 
             tmp.getVoteManager().setVotingStrategyGroup(new YesVoteStrategy(0));
 
-            //tmp.getVoteManager().setVotingParticipantsThreshold(5);
-            //tmp.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
+            tmp.getVoteManager().setVotingParticipantsThreshold(5);
+            tmp.getVoteManager().setSubgroupSelector(new RandomSubgroupSelector());
 
             try {
                 Thread.sleep(100);
@@ -94,7 +102,7 @@ public class GroupBuildingRunnable2 implements Runnable {
                 e.printStackTrace();
             }
             System.err.println("joining " + tmp.getClientID());
-            tmp.tryJoinGroup(groupName, "localhost", dhPort + 1, null, (code, info) -> {
+            tmp.tryJoinGroup(groupName, "localhost", dhPort + 1 + i, null, (code, info) -> {
                 if (code >= 200000) {
                     fail("Failure: " + code);
                     latch.countDown();
@@ -122,6 +130,15 @@ public class GroupBuildingRunnable2 implements Runnable {
                 // FIXME
                 Thread.sleep(300);
             } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            list.add(tmp);
+        }
+
+        for (HyperZMQ hyperZMQ : list) {
+            try {
+                hyperZMQ.close();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

@@ -1,6 +1,6 @@
 package txprocessor;
 
-import blockchain.ValidatorAddress;
+import blockchain.GlobalConfig;
 import sawtooth.sdk.processor.TransactionProcessor;
 
 /**
@@ -8,15 +8,15 @@ import sawtooth.sdk.processor.TransactionProcessor;
  */
 public class CombinedTP {
     public static void main(String[] args) {
-        String url = ValidatorAddress.VALIDATOR_URL_DEFAULT;
+        String url = GlobalConfig.VALIDATOR_URL_DEFAULT;
         if (args != null && args.length > 0) {
             url = args[0];
         }
         // Connect the transaction processor to the validator
         TransactionProcessor tp = new TransactionProcessor(url);
         // The handler implements the actual chaincode
-        tp.addHandler(new CSVStringsHandler());
-        tp.addHandler(new KeyExReceiptHandler());
+        tp.addHandler(new GroupMessageHandler());
+        tp.addHandler(new ReceiptHandler());
         Thread t = new Thread(tp);
         t.start();
     }

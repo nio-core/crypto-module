@@ -14,8 +14,10 @@ public class YesVoteStrategy implements IVotingStrategy {
 
     @Override
     public Vote castVote(VotingMatter votingMatter, Signer signer) {
+        int sleep = (int) ((Math.random() * (sleepMS - 1)) + 1);
+
         try {
-            Thread.sleep(sleepMS);
+            Thread.sleep(sleep);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
