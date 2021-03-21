@@ -142,7 +142,9 @@ public class Crypto {
     }
 
     List<String> getGroupNames() {
-        return new ArrayList<>(groupKeys.keySet());
+        List<String> ret = new ArrayList<>(groupKeys.keySet());
+        ret.removeIf(s -> s.equals(DATA_ENCRYPTION_KEY_ALIAS));
+        return ret;
     }
 
     boolean hasKeyForGroup(String groupName) {
@@ -243,7 +245,8 @@ public class Crypto {
 
     public boolean removeKeypair(String alias) {
         boolean b = curveKeys.removeIf(kp -> alias.equals(kp.alias));
-        save();
+        if(b)
+            save();
         return b;
     }
 }

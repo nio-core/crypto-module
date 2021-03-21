@@ -1,5 +1,7 @@
 package gui;
 
+import com.google.gson.Gson;
+
 enum ActivityType {
     MESSAGE,
     CONTRACT,
@@ -20,5 +22,14 @@ public class Activity {
         this.group = group;
         this.sourceID = sourceID;
         this.payload = payload;
+    }
+
+    public String toJSON() {
+        return new Gson().toJson(this);
+    }
+
+    @Override
+    public String toString() {
+        return "";
     }
 }

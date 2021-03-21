@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<style>
+  h2 {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  h4 {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+</style>
+
+<h2 id="title">HyperZMQ Overview</h2>
+
+<div>
+  <div style="float: left;margin-right:30px">
+    <h4>Member Of</h4>
+    <table id="groupsTable">
+    </table>
+  </div>
+
+  <div style="float: left;margin-right:30px">
+    <h4>Known Clients</h4>
+    <table id="clientsTable">
+    </table>
+  </div>
+
+  <div style="float: left;">
+    <h4>Latest Activity</h4>
+    <table id="acTable">
+    </table>
+  </div>
+</div>
+
+<!--<script language="javascript" type="text/javascript" src="../../scripts/jquery-3.6.0.js"></script>-->
+
+<script>
+  getClientName();
+  getGroups();
+  getActivities();
+  getClients();
+
+  function getClientName() {
+    console.log("getClientName...");
+    const xhr = new XMLHttpRequest();
+    const url = 'http://localhost:8090/clientname';
+    xhr.open("GET", url);
+    xhr.send();
+
+    xhr.onload = (e) => {
+      if (xhr.status === 200) {
+        var responseText = xhr.responseText
+        console.log("getClientName response: " + responseText);
+
+        var j = JSON.parse(responseText);
+        document.getElementById("title").innerHTML = "HyperZMQ Overview - " + j.result;
+      }
+    }
+  }
+
+  function getGroups() {
+    console.log("getGroups...");
+    const xhr = new XMLHttpRequest();
+    const url = 'http://localhost:8090/groups';
+    xhr.open("GET", url);
+    xhr.send();
+
+    xhr.onload = (e) => {
+      if (xhr.status === 200) {
+        var responseText = xhr.responseText
+        console.log("getGroups response: " + responseText);
+
+        var j = JSON.parse(responseText);
+        //alert("result: " + j.result);
+        var list = j.result.split(",");
+        list.forEach(function (item, index, array) {
+          //console.log(index, item);
+          var table = document.getElementById("groupsTable");
+          var row = table.insertRow(0);
+          var cell = row.insertCell(0);
+          cell.innerHTML = item;
+        });
+      }
+    }
+  }
+
+  function getActivities() {
+    console.log("getActivities...");
+    const xhr = new XMLHttpRequest();
+    const url = 'http://localhost:8090/activities';
+    xhr.open("GET", url);
+    xhr.send();
+
+    xhr.onload = (e) => {
+      if (xhr.status === 200) {
+        var responseText = xhr.responseText
+        console.log("getActivities response: " + responseText);
+
+        var j = JSON.parse(responseText);
+        //alert("result: " + j.result);
+        var list = j.result;
+        list.forEach(function (item, index, array) {
+          //console.log(index, item);
+          var table = document.getElementById("acTable");
+          var row = table.insertRow(0);
+          var cell = row.insertCell(0);
+          cell.innerHTML = item;
+        });
+      }
+    }
+  }
+
+  function getClients() {
+    console.log("getClients...");
+    const xhr = new XMLHttpRequest();
+    const url = 'http://localhost:8090/clients';
+    xhr.open("GET", url);
+    xhr.send();
+
+    xhr.onload = (e) => {
+      if (xhr.status === 200) {
+        var responseText = xhr.responseText
+        console.log("getClients response: " + responseText);
+        var j = JSON.parse(responseText);
+        //alert("result: " + j.result);
+        var list = j.result;
+        list.forEach(function (item, index, array) {
+          //console.log(index, item);
+          var table = document.getElementById("clientsTable");
+          var row = table.insertRow(0);
+          var cell = row.insertCell(0);
+          cell.innerHTML = shorten(item);
+        });
+      }
+    }
+  }
+
+  function shorten(input) {
+    var first3 = input.slice(0, 3);
+    var last3 = input.slice(-3);
+    return first3 + ".." + last3;
+  }
+
+</script>

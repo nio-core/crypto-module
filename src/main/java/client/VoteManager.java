@@ -7,6 +7,7 @@ import groups.Envelope;
 import groups.GroupMessage;
 import groups.MessageType;
 import joingroup.JoinRequest;
+import joinnetwork.IPostJoinNetworkHandler;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import sawtooth.sdk.protobuf.Transaction;
 import subgrouping.ISubgroupSelector;
@@ -29,7 +30,7 @@ public class VoteManager {
 
     private final AtomicBoolean runVoteRequiredHandler = new AtomicBoolean(true);
     private final AtomicBoolean runVotingProcessHandler = new AtomicBoolean(true);
-    private final AtomicBoolean runVotingFinisher = new AtomicBoolean(true);
+    private final AtomicBoolean runVotingCompleter = new AtomicBoolean(true);
 
     private final ExecutorService votingFinisherExecutor = Executors.newSingleThreadExecutor();
 
@@ -56,6 +57,7 @@ public class VoteManager {
     }
 
     private IVoteStatusCallback statusCallback = null;
+    public IPostJoinNetworkHandler postJoinNetworkHandler = null;
 
     public VoteManager(HyperZMQ hyperZMQ) {
         this.hyperZMQ = hyperZMQ;
@@ -199,7 +201,7 @@ public class VoteManager {
 
     private void handleFinishedVotes() {
         //print("Starting VoteFinisherLoop...");
-        while (runVotingFinisher.get()) {
+        while (runVotingCompleter.get()) {
             ImmutablePair<VotingResult, Boolean> resultPair = null;
             try {
                 resultPair = finishedVotes.poll(GlobalConfig.VOTING_FINISHER_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -233,9 +235,15 @@ public class VoteManager {
                                 encryptedStream.write(hyperZMQ.getKeyForGroup(joinRequest.getGroupName()));
                                 hyperZMQ.sendKeyExchangeReceiptFor(joinRequest.getGroupName(), joinRequest.getApplicantPublicKey());
                             } else {
+                                // SUCCESSFUL JOIN NETWORK VOTE
                                 // TODO vvv the strings to indicate success / failure
-                                //print("Sending allowed to network response");
                                 encryptedStream.write("Allowed!" + hyperZMQ.getValidatorAddressToSend());
+                                // Execute postjoinnetworkhandler
+                                if (postJoinNetworkHandler != null) {
+                                    postJoinNetworkHandler.newNetworkMember(joinRequest.getApplicantPublicKey());
+                                } else {
+                                    print("No IPostJoinNetworkHandler configured!");
+                                }
                             }
                         } else {
                             // TODO vvv the strings to indicate success / failure
@@ -348,7 +356,7 @@ public class VoteManager {
     }
 
     public void stopVotingFinisher() {
-        runVotingFinisher.set(false);
+        runVotingCompleter.set(false);
     }
 
     public void addVoteRequired(VotingMatter votingMatter) {
